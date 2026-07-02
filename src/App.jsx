@@ -12,6 +12,37 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const number = new Intl.NumberFormat("id-ID");
 
+function withBaseUrl(pathname) {
+  const base = import.meta.env.BASE_URL || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  const normalizedPath = pathname.replace(/^\/+/, "");
+  return `${normalizedBase}${normalizedPath}`;
+}
+
+async function fetchJson(pathname) {
+  const url = withBaseUrl(pathname);
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+  });
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText} saat meminta ${url}`);
+  }
+
+  if (!contentType.includes("application/json")) {
+    const preview = bodyText.trim().replace(/\s+/g, " ").slice(0, 90);
+    throw new Error(`Respon bukan JSON dari ${url}: \"${preview}\"`);
+  }
+
+  try {
+    return JSON.parse(bodyText);
+  } catch (error) {
+    throw new Error(`JSON tidak valid dari ${url}: ${error.message}`);
+  }
+}
+
 function compactPrice(value) {
   if (!Number.isFinite(value)) return "-";
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} M`;
@@ -971,7 +1002,7 @@ function Header({ page }) {
           <h1>{routes.find(([key]) => key === page)?.[1] || "Dashboard"}</h1>
         </div>
         <Button asChild size="sm">
-          <a href="/data/mobil123_clean.json" target="_blank" rel="noreferrer">
+          <a href={withBaseUrl("data/mobil123_clean.json")} target="_blank" rel="noreferrer">
             Buka JSON
             <ArrowUpRight className="h-4 w-4" />
           </a>
@@ -1006,10 +1037,10 @@ function App() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/data/mobil123_clean.json").then((response) => response.json()),
-      fetch("/data/mobil123_raw.json").then((response) => response.json()),
-      fetch("/data/mobil123_metadata.json").then((response) => response.json()),
-      fetch("/data/mobil123_regression.json").then((response) => response.json()),
+      fetchJson("data/mobil123_clean.json"),
+      fetchJson("data/mobil123_raw.json"),
+      fetchJson("data/mobil123_metadata.json"),
+      fetchJson("data/mobil123_regression.json"),
     ])
       .then(([clean, raw, metadataReport, regressionReport]) => {
         setRows(clean);

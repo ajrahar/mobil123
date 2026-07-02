@@ -1,0 +1,1637 @@
+{
+  "model_name": "Multiple Linear Regression",
+  "selected_model": "Log-target Multiple Linear Regression",
+  "research_flow": [
+    {
+      "phase": "1. Data Intake",
+      "description": "Load CSV mentah, buang baris yang seluruh kolomnya kosong, lalu audit kelengkapan data per kolom."
+    },
+    {
+      "phase": "2. Feature Engineering",
+      "description": "Ekstrak tahun, merk, tipe, jenis_mobil, parsing km, normalisasi transmisi/lokasi/penjual, dan bangun dummy jenis mobil."
+    },
+    {
+      "phase": "3. Missing Data Handling",
+      "description": "Hitung jumlah jenis_mobil yang kosong. Untuk baris dengan jenis_mobil ada tetapi harga kosong, lakukan imputasi rata-rata harga per jenis_mobil."
+    },
+    {
+      "phase": "4. Modeling",
+      "description": "Bandingkan baseline MLR pada harga mentah vs MLR dengan target log(harga), lalu pilih model dengan performa terbaik."
+    },
+    {
+      "phase": "5. Evaluation",
+      "description": "Evaluasi dengan train/test split, R2, MAE skala Rupiah, residual, dan ranking koefisien untuk interpretasi faktor harga."
+    }
+  ],
+  "testing_protocol": [
+    "Uji ketersediaan data: cek missing tahun, km, merk, transmisi, jenis_mobil, harga.",
+    "Uji quality imputasi: hanya imputasi jika jenis_mobil tersedia dan jenis tersebut punya harga referensi.",
+    "Uji performa model: R2 dan MAE pada data test agar tidak hanya menilai data train.",
+    "Uji interpretasi: cek koefisien paling besar positif/negatif dan error prediksi paling tinggi."
+  ],
+  "target": "log_harga",
+  "target_original": "harga",
+  "target_unit": "log Rupiah, converted back to Rupiah for MAE",
+  "feature_columns": [
+    "usia_mobil",
+    "km",
+    "merk",
+    "transmisi",
+    "penjual",
+    "jenis_mobil",
+    "is_convertible",
+    "is_coupe",
+    "is_fastback",
+    "is_hatchback",
+    "is_mpv",
+    "is_pickup",
+    "is_suv",
+    "is_sedan",
+    "is_truck",
+    "is_van",
+    "is_wagon"
+  ],
+  "categorical_columns": [
+    "merk",
+    "transmisi",
+    "penjual",
+    "jenis_mobil"
+  ],
+  "numeric_columns": [
+    "usia_mobil",
+    "km",
+    "is_convertible",
+    "is_coupe",
+    "is_fastback",
+    "is_hatchback",
+    "is_mpv",
+    "is_pickup",
+    "is_suv",
+    "is_sedan",
+    "is_truck",
+    "is_van",
+    "is_wagon"
+  ],
+  "train_rows": 1570,
+  "test_rows": 393,
+  "r2_test": 0.5685766020573696,
+  "mae_test": 179267343.5723311,
+  "median_ape_test": 24.27779768242631,
+  "intercept": 21.523202484045232,
+  "model_comparison": [
+    {
+      "model": "MLR harga mentah",
+      "target": "harga",
+      "r2": 0.38291937566325396,
+      "mae": 209513643.44539055,
+      "note": "Baseline linear regression langsung ke Rupiah."
+    },
+    {
+      "model": "MLR log(harga)",
+      "target": "log_harga",
+      "r2": 0.5685766020573696,
+      "mae": 179267343.5723311,
+      "note": "Target ditransformasi log lalu prediksi dikembalikan ke Rupiah."
+    }
+  ],
+  "top_positive_coefficients": [
+    {
+      "fitur": "num__is_convertible",
+      "koefisien": 0.8118033520075171,
+      "efek_persen": 125.19654134417202
+    },
+    {
+      "fitur": "cat__jenis_mobil_Fastback",
+      "koefisien": 0.3934235781573257,
+      "efek_persen": 48.20460187165105
+    },
+    {
+      "fitur": "num__is_fastback",
+      "koefisien": 0.3934235781563502,
+      "efek_persen": 48.20460187150648
+    },
+    {
+      "fitur": "cat__merk_Ineos",
+      "koefisien": 0.3150226584143395,
+      "efek_persen": 37.02903592119677
+    },
+    {
+      "fitur": "num__is_coupe",
+      "koefisien": 0.27279970099147305,
+      "efek_persen": 31.3637098263275
+    },
+    {
+      "fitur": "cat__jenis_mobil_Coupe",
+      "koefisien": 0.2727997009914026,
+      "efek_persen": 31.363709826318242
+    },
+    {
+      "fitur": "cat__penjual_Private",
+      "koefisien": 0.25120535744639894,
+      "efek_persen": 28.557405943164294
+    },
+    {
+      "fitur": "cat__merk_Ferrari",
+      "koefisien": 0.15442717584509125,
+      "efek_persen": 16.69892899541101
+    },
+    {
+      "fitur": "cat__penjual_Dealer",
+      "koefisien": 0.15371973166682773,
+      "efek_persen": 16.61640021317887
+    },
+    {
+      "fitur": "cat__penjual_Sales Agent",
+      "koefisien": 0.03868127953528355,
+      "efek_persen": 3.9439140324164734
+    },
+    {
+      "fitur": "num__km",
+      "koefisien": -2.0592078360248678e-06,
+      "efek_persen": -0.00020592057158319577
+    },
+    {
+      "fitur": "num__usia_mobil",
+      "koefisien": -0.04481257724419624,
+      "efek_persen": -4.382332569246438
+    }
+  ],
+  "top_negative_coefficients": [
+    {
+      "fitur": "cat__merk_smart",
+      "koefisien": -2.1385904684481933,
+      "efek_persen": -88.21792018327282
+    },
+    {
+      "fitur": "cat__merk_MG",
+      "koefisien": -2.10410845565631,
+      "efek_persen": -87.80456464702306
+    },
+    {
+      "fitur": "cat__merk_Dodge",
+      "koefisien": -2.0431007744344543,
+      "efek_persen": -87.03738543694477
+    },
+    {
+      "fitur": "cat__merk_Wuling",
+      "koefisien": -1.9935862071280115,
+      "efek_persen": -86.37939147015683
+    },
+    {
+      "fitur": "cat__merk_Neta",
+      "koefisien": -1.967019195555686,
+      "efek_persen": -86.01268300014175
+    },
+    {
+      "fitur": "cat__merk_Jetour",
+      "koefisien": -1.963045009899559,
+      "efek_persen": -85.95698420017686
+    },
+    {
+      "fitur": "cat__merk_Daihatsu",
+      "koefisien": -1.9223380979279758,
+      "efek_persen": -85.37354188878845
+    },
+    {
+      "fitur": "cat__merk_Nissan",
+      "koefisien": -1.81968872321359,
+      "efek_persen": -83.79238063606385
+    },
+    {
+      "fitur": "cat__merk_Chery",
+      "koefisien": -1.7381714437276883,
+      "efek_persen": -82.41583568380103
+    },
+    {
+      "fitur": "cat__merk_GWM",
+      "koefisien": -1.736416453785083,
+      "efek_persen": -82.38494855690612
+    },
+    {
+      "fitur": "cat__merk_Suzuki",
+      "koefisien": -1.7321918546906434,
+      "efek_persen": -82.31037461493881
+    },
+    {
+      "fitur": "cat__merk_Peugeot",
+      "koefisien": -1.7013069600654436,
+      "efek_persen": -81.75550800608286
+    }
+  ],
+  "top_impact_coefficients": [
+    {
+      "fitur": "cat__merk_smart",
+      "koefisien": -2.1385904684481933,
+      "efek_persen": -88.21792018327282
+    },
+    {
+      "fitur": "cat__merk_MG",
+      "koefisien": -2.10410845565631,
+      "efek_persen": -87.80456464702306
+    },
+    {
+      "fitur": "cat__merk_Dodge",
+      "koefisien": -2.0431007744344543,
+      "efek_persen": -87.03738543694477
+    },
+    {
+      "fitur": "cat__merk_Wuling",
+      "koefisien": -1.9935862071280115,
+      "efek_persen": -86.37939147015683
+    },
+    {
+      "fitur": "cat__merk_Neta",
+      "koefisien": -1.967019195555686,
+      "efek_persen": -86.01268300014175
+    },
+    {
+      "fitur": "cat__merk_Jetour",
+      "koefisien": -1.963045009899559,
+      "efek_persen": -85.95698420017686
+    },
+    {
+      "fitur": "cat__merk_Daihatsu",
+      "koefisien": -1.9223380979279758,
+      "efek_persen": -85.37354188878845
+    },
+    {
+      "fitur": "cat__merk_Nissan",
+      "koefisien": -1.81968872321359,
+      "efek_persen": -83.79238063606385
+    },
+    {
+      "fitur": "cat__merk_Chery",
+      "koefisien": -1.7381714437276883,
+      "efek_persen": -82.41583568380103
+    },
+    {
+      "fitur": "cat__merk_GWM",
+      "koefisien": -1.736416453785083,
+      "efek_persen": -82.38494855690612
+    },
+    {
+      "fitur": "cat__merk_Suzuki",
+      "koefisien": -1.7321918546906434,
+      "efek_persen": -82.31037461493881
+    },
+    {
+      "fitur": "cat__merk_Peugeot",
+      "koefisien": -1.7013069600654436,
+      "efek_persen": -81.75550800608286
+    },
+    {
+      "fitur": "cat__merk_KIA",
+      "koefisien": -1.6809066682257447,
+      "efek_persen": -81.37949267418077
+    },
+    {
+      "fitur": "cat__merk_BYD",
+      "koefisien": -1.6656256183973084,
+      "efek_persen": -81.09276661575117
+    },
+    {
+      "fitur": "cat__merk_Honda",
+      "koefisien": -1.6505606552212992,
+      "efek_persen": -80.80577349849698
+    },
+    {
+      "fitur": "cat__merk_Chevrolet",
+      "koefisien": -1.5958707234736247,
+      "efek_persen": -79.7268071820041
+    },
+    {
+      "fitur": "cat__merk_Mazda",
+      "koefisien": -1.5387225149260155,
+      "efek_persen": -78.53448549097291
+    },
+    {
+      "fitur": "cat__merk_Hyundai",
+      "koefisien": -1.5320474596377796,
+      "efek_persen": -78.39072271639552
+    }
+  ],
+  "evaluation_points": [
+    {
+      "actual": 5250000000,
+      "predicted_log_mlr": 561387531.1549544,
+      "residual_log_mlr": 4688612468.845045,
+      "absolute_percentage_error_log_mlr": 89.30690416847705
+    },
+    {
+      "actual": 6950000000,
+      "predicted_log_mlr": 2402380758.85888,
+      "residual_log_mlr": 4547619241.14112,
+      "absolute_percentage_error_log_mlr": 65.43337037613122
+    },
+    {
+      "actual": 4950000000,
+      "predicted_log_mlr": 1447563702.673832,
+      "residual_log_mlr": 3502436297.326168,
+      "absolute_percentage_error_log_mlr": 70.75628883487208
+    },
+    {
+      "actual": 3700000000,
+      "predicted_log_mlr": 615719403.8365228,
+      "residual_log_mlr": 3084280596.163477,
+      "absolute_percentage_error_log_mlr": 83.35893503144533
+    },
+    {
+      "actual": 4150000000,
+      "predicted_log_mlr": 1355234833.732664,
+      "residual_log_mlr": 2794765166.267336,
+      "absolute_percentage_error_log_mlr": 67.34373894620086
+    },
+    {
+      "actual": 293999000,
+      "predicted_log_mlr": 2092587240.2275627,
+      "residual_log_mlr": -1798588240.2275627,
+      "absolute_percentage_error_log_mlr": 611.7667883998118
+    },
+    {
+      "actual": 2145000000,
+      "predicted_log_mlr": 439678894.52088255,
+      "residual_log_mlr": 1705321105.4791174,
+      "absolute_percentage_error_log_mlr": 79.50214943958589
+    },
+    {
+      "actual": 2249000000,
+      "predicted_log_mlr": 648512788.3187757,
+      "residual_log_mlr": 1600487211.6812243,
+      "absolute_percentage_error_log_mlr": 71.16439358298018
+    },
+    {
+      "actual": 1750000000,
+      "predicted_log_mlr": 364646547.7893872,
+      "residual_log_mlr": 1385353452.2106128,
+      "absolute_percentage_error_log_mlr": 79.16305441203502
+    },
+    {
+      "actual": 1900000000,
+      "predicted_log_mlr": 521205836.9069098,
+      "residual_log_mlr": 1378794163.09309,
+      "absolute_percentage_error_log_mlr": 72.56811384700474
+    },
+    {
+      "actual": 980000000,
+      "predicted_log_mlr": 2031910853.8554766,
+      "residual_log_mlr": -1051910853.8554766,
+      "absolute_percentage_error_log_mlr": 107.33784223015068
+    },
+    {
+      "actual": 2350000000,
+      "predicted_log_mlr": 1363013770.447533,
+      "residual_log_mlr": 986986229.5524671,
+      "absolute_percentage_error_log_mlr": 41.99941402350924
+    },
+    {
+      "actual": 1475000000,
+      "predicted_log_mlr": 576997014.9969127,
+      "residual_log_mlr": 898002985.0030873,
+      "absolute_percentage_error_log_mlr": 60.88155830529405
+    },
+    {
+      "actual": 1399000000,
+      "predicted_log_mlr": 656315607.7854236,
+      "residual_log_mlr": 742684392.2145764,
+      "absolute_percentage_error_log_mlr": 53.086804304115546
+    },
+    {
+      "actual": 1459607628,
+      "predicted_log_mlr": 822236810.7840358,
+      "residual_log_mlr": 637370817.2159642,
+      "absolute_percentage_error_log_mlr": 43.66727091508213
+    },
+    {
+      "actual": 475000000,
+      "predicted_log_mlr": 1086603441.4086494,
+      "residual_log_mlr": -611603441.4086494,
+      "absolute_percentage_error_log_mlr": 128.7586192439262
+    },
+    {
+      "actual": 1215000000,
+      "predicted_log_mlr": 625370573.3005804,
+      "residual_log_mlr": 589629426.6994196,
+      "absolute_percentage_error_log_mlr": 48.52917092176293
+    },
+    {
+      "actual": 490000000,
+      "predicted_log_mlr": 1063798389.1009815,
+      "residual_log_mlr": -573798389.1009815,
+      "absolute_percentage_error_log_mlr": 117.10171206142479
+    },
+    {
+      "actual": 570000000,
+      "predicted_log_mlr": 1108073950.8786569,
+      "residual_log_mlr": -538073950.8786569,
+      "absolute_percentage_error_log_mlr": 94.39893875064156
+    },
+    {
+      "actual": 210000000,
+      "predicted_log_mlr": 745268465.2790885,
+      "residual_log_mlr": -535268465.2790885,
+      "absolute_percentage_error_log_mlr": 254.88974537099455
+    },
+    {
+      "actual": 945000000,
+      "predicted_log_mlr": 411049502.2685335,
+      "residual_log_mlr": 533950497.7314665,
+      "absolute_percentage_error_log_mlr": 56.50269817264195
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 812054084.6210498,
+      "residual_log_mlr": -528041522.62104976,
+      "absolute_percentage_error_log_mlr": 185.92188982860898
+    },
+    {
+      "actual": 493000000,
+      "predicted_log_mlr": 1019614100.2095695,
+      "residual_log_mlr": -526614100.20956945,
+      "absolute_percentage_error_log_mlr": 106.81827590457797
+    },
+    {
+      "actual": 675000000,
+      "predicted_log_mlr": 154076519.9585068,
+      "residual_log_mlr": 520923480.0414932,
+      "absolute_percentage_error_log_mlr": 77.17384889503603
+    },
+    {
+      "actual": 775000000,
+      "predicted_log_mlr": 288455086.49779606,
+      "residual_log_mlr": 486544913.50220394,
+      "absolute_percentage_error_log_mlr": 62.77998883899406
+    },
+    {
+      "actual": 1090000000,
+      "predicted_log_mlr": 609804775.9237207,
+      "residual_log_mlr": 480195224.0762793,
+      "absolute_percentage_error_log_mlr": 44.05460771342012
+    },
+    {
+      "actual": 490000000,
+      "predicted_log_mlr": 964804224.6321499,
+      "residual_log_mlr": -474804224.63214993,
+      "absolute_percentage_error_log_mlr": 96.89882135349998
+    },
+    {
+      "actual": 1058000000,
+      "predicted_log_mlr": 597400350.785252,
+      "residual_log_mlr": 460599649.214748,
+      "absolute_percentage_error_log_mlr": 43.534938489106615
+    },
+    {
+      "actual": 745000000,
+      "predicted_log_mlr": 303244211.50080556,
+      "residual_log_mlr": 441755788.49919444,
+      "absolute_percentage_error_log_mlr": 59.296078993180465
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 715141866.5838028,
+      "residual_log_mlr": -431129304.5838028,
+      "absolute_percentage_error_log_mlr": 151.79937871332706
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 892346752.8840505,
+      "residual_log_mlr": -425782134.8840505,
+      "absolute_percentage_error_log_mlr": 91.25898502746097
+    },
+    {
+      "actual": 730000000,
+      "predicted_log_mlr": 309573432.72841054,
+      "residual_log_mlr": 420426567.27158946,
+      "absolute_percentage_error_log_mlr": 57.59268044816294
+    },
+    {
+      "actual": 760000000,
+      "predicted_log_mlr": 341353557.677145,
+      "residual_log_mlr": 418646442.322855,
+      "absolute_percentage_error_log_mlr": 55.085058200375656
+    },
+    {
+      "actual": 1960000000,
+      "predicted_log_mlr": 1544834420.1548953,
+      "residual_log_mlr": 415165579.8451047,
+      "absolute_percentage_error_log_mlr": 21.181917339035955
+    },
+    {
+      "actual": 738000000,
+      "predicted_log_mlr": 322988588.5034894,
+      "residual_log_mlr": 415011411.4965106,
+      "absolute_percentage_error_log_mlr": 56.23460860386322
+    },
+    {
+      "actual": 889000000,
+      "predicted_log_mlr": 476504565.77903044,
+      "residual_log_mlr": 412495434.22096956,
+      "absolute_percentage_error_log_mlr": 46.39993635781435
+    },
+    {
+      "actual": 700000000,
+      "predicted_log_mlr": 296715468.1696018,
+      "residual_log_mlr": 403284531.8303982,
+      "absolute_percentage_error_log_mlr": 57.61207597577117
+    },
+    {
+      "actual": 890000000,
+      "predicted_log_mlr": 1261265449.4176278,
+      "residual_log_mlr": -371265449.4176278,
+      "absolute_percentage_error_log_mlr": 41.71521903568852
+    },
+    {
+      "actual": 2100000000,
+      "predicted_log_mlr": 2459469686.167079,
+      "residual_log_mlr": -359469686.167079,
+      "absolute_percentage_error_log_mlr": 17.117604103194235
+    },
+    {
+      "actual": 850000000,
+      "predicted_log_mlr": 501865366.31236976,
+      "residual_log_mlr": 348134633.68763024,
+      "absolute_percentage_error_log_mlr": 40.957015727956495
+    },
+    {
+      "actual": 885000000,
+      "predicted_log_mlr": 566242056.2754047,
+      "residual_log_mlr": 318757943.7245953,
+      "absolute_percentage_error_log_mlr": 36.01784674854184
+    },
+    {
+      "actual": 715000000,
+      "predicted_log_mlr": 396886855.9134397,
+      "residual_log_mlr": 318113144.0865603,
+      "absolute_percentage_error_log_mlr": 44.49134882329515
+    },
+    {
+      "actual": 910000000,
+      "predicted_log_mlr": 603371715.1630567,
+      "residual_log_mlr": 306628284.83694327,
+      "absolute_percentage_error_log_mlr": 33.69541591614762
+    },
+    {
+      "actual": 839000000,
+      "predicted_log_mlr": 1133690668.1895797,
+      "residual_log_mlr": -294690668.1895797,
+      "absolute_percentage_error_log_mlr": 35.1240367329654
+    },
+    {
+      "actual": 633000000,
+      "predicted_log_mlr": 348664991.9618624,
+      "residual_log_mlr": 284335008.0381376,
+      "absolute_percentage_error_log_mlr": 44.91864266005334
+    },
+    {
+      "actual": 669000000,
+      "predicted_log_mlr": 388934861.1047569,
+      "residual_log_mlr": 280065138.8952431,
+      "absolute_percentage_error_log_mlr": 41.863249461172366
+    },
+    {
+      "actual": 120000000,
+      "predicted_log_mlr": 399728773.49571186,
+      "residual_log_mlr": -279728773.49571186,
+      "absolute_percentage_error_log_mlr": 233.10731124642655
+    },
+    {
+      "actual": 499000000,
+      "predicted_log_mlr": 244038690.53195104,
+      "residual_log_mlr": 254961309.46804896,
+      "absolute_percentage_error_log_mlr": 51.094450795200196
+    },
+    {
+      "actual": 1459607628,
+      "predicted_log_mlr": 1212408003.8325007,
+      "residual_log_mlr": 247199624.1674993,
+      "absolute_percentage_error_log_mlr": 16.93603263133257
+    },
+    {
+      "actual": 298357143,
+      "predicted_log_mlr": 58197997.70169928,
+      "residual_log_mlr": 240159145.2983007,
+      "absolute_percentage_error_log_mlr": 80.49384803845662
+    },
+    {
+      "actual": 465000000,
+      "predicted_log_mlr": 229861194.9964857,
+      "residual_log_mlr": 235138805.0035143,
+      "absolute_percentage_error_log_mlr": 50.56748494699232
+    },
+    {
+      "actual": 469000000,
+      "predicted_log_mlr": 696993310.9361211,
+      "residual_log_mlr": -227993310.9361211,
+      "absolute_percentage_error_log_mlr": 48.61264625503649
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 242700498.10882816,
+      "residual_log_mlr": 223864119.89117184,
+      "absolute_percentage_error_log_mlr": 47.981375195315785
+    },
+    {
+      "actual": 719000000,
+      "predicted_log_mlr": 500404762.9070819,
+      "residual_log_mlr": 218595237.0929181,
+      "absolute_percentage_error_log_mlr": 30.40267553448096
+    },
+    {
+      "actual": 399000000,
+      "predicted_log_mlr": 610917199.707171,
+      "residual_log_mlr": -211917199.70717096,
+      "absolute_percentage_error_log_mlr": 53.11208012711052
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 677623261.1203513,
+      "residual_log_mlr": -211058643.1203513,
+      "absolute_percentage_error_log_mlr": 45.236744274584346
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 260773576.7577088,
+      "residual_log_mlr": 205791041.2422912,
+      "absolute_percentage_error_log_mlr": 44.10772555459643
+    },
+    {
+      "actual": 225000000,
+      "predicted_log_mlr": 430451148.8631588,
+      "residual_log_mlr": -205451148.86315882,
+      "absolute_percentage_error_log_mlr": 91.31162171695948
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 666827625.4034019,
+      "residual_log_mlr": -200263007.40340185,
+      "absolute_percentage_error_log_mlr": 42.92288777958766
+    },
+    {
+      "actual": 625000000,
+      "predicted_log_mlr": 425115831.6957454,
+      "residual_log_mlr": 199884168.3042546,
+      "absolute_percentage_error_log_mlr": 31.981466928680735
+    },
+    {
+      "actual": 899000000,
+      "predicted_log_mlr": 1098188647.9830732,
+      "residual_log_mlr": -199188647.98307323,
+      "absolute_percentage_error_log_mlr": 22.156690543167212
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 267464688.73216727,
+      "residual_log_mlr": 199099929.26783273,
+      "absolute_percentage_error_log_mlr": 42.673602237843234
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 268600327.2857066,
+      "residual_log_mlr": 197964290.71429342,
+      "absolute_percentage_error_log_mlr": 42.43019789260861
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 270471928.0412855,
+      "residual_log_mlr": 196092689.9587145,
+      "absolute_percentage_error_log_mlr": 42.029052867166726
+    },
+    {
+      "actual": 190000000,
+      "predicted_log_mlr": 385380167.63787824,
+      "residual_log_mlr": -195380167.63787824,
+      "absolute_percentage_error_log_mlr": 102.83166717783065
+    },
+    {
+      "actual": 201503268,
+      "predicted_log_mlr": 388934861.1047569,
+      "residual_log_mlr": -187431593.1047569,
+      "absolute_percentage_error_log_mlr": 93.01665177199851
+    },
+    {
+      "actual": 122000000,
+      "predicted_log_mlr": 308870049.3595652,
+      "residual_log_mlr": -186870049.3595652,
+      "absolute_percentage_error_log_mlr": 153.17217160620098
+    },
+    {
+      "actual": 259000000,
+      "predicted_log_mlr": 444600131.16744894,
+      "residual_log_mlr": -185600131.16744894,
+      "absolute_percentage_error_log_mlr": 71.66028230403434
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 283774488.85307515,
+      "residual_log_mlr": 182790129.14692485,
+      "absolute_percentage_error_log_mlr": 39.17788063965983
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 284124934.6020721,
+      "residual_log_mlr": 182439683.39792788,
+      "absolute_percentage_error_log_mlr": 39.10276869685988
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 286958972.4031799,
+      "residual_log_mlr": 179605645.59682012,
+      "absolute_percentage_error_log_mlr": 38.49534205288154
+    },
+    {
+      "actual": 480000000,
+      "predicted_log_mlr": 302396549.1814986,
+      "residual_log_mlr": 177603450.8185014,
+      "absolute_percentage_error_log_mlr": 37.00071892052112
+    },
+    {
+      "actual": 504000000,
+      "predicted_log_mlr": 327981481.27107954,
+      "residual_log_mlr": 176018518.72892046,
+      "absolute_percentage_error_log_mlr": 34.9243092716112
+    },
+    {
+      "actual": 1111000000,
+      "predicted_log_mlr": 1282693343.8655968,
+      "residual_log_mlr": -171693343.86559677,
+      "absolute_percentage_error_log_mlr": 15.453946342537964
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 637679128.3152286,
+      "residual_log_mlr": -171114510.31522858,
+      "absolute_percentage_error_log_mlr": 36.67541509014055
+    },
+    {
+      "actual": 445000000,
+      "predicted_log_mlr": 277125692.5827201,
+      "residual_log_mlr": 167874307.4172799,
+      "absolute_percentage_error_log_mlr": 37.72456346455728
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 298863839.4695958,
+      "residual_log_mlr": 167700778.5304042,
+      "absolute_percentage_error_log_mlr": 35.94374113692526
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 307213430.28479934,
+      "residual_log_mlr": 164605834.71520066,
+      "absolute_percentage_error_log_mlr": 34.88747639738718
+    },
+    {
+      "actual": 499000000,
+      "predicted_log_mlr": 336978999.6084782,
+      "residual_log_mlr": 162021000.3915218,
+      "absolute_percentage_error_log_mlr": 32.469138355014394
+    },
+    {
+      "actual": 299000000,
+      "predicted_log_mlr": 460551325.4082192,
+      "residual_log_mlr": -161551325.40821922,
+      "absolute_percentage_error_log_mlr": 54.03054361478904
+    },
+    {
+      "actual": 210000000,
+      "predicted_log_mlr": 371471335.14001715,
+      "residual_log_mlr": -161471335.14001715,
+      "absolute_percentage_error_log_mlr": 76.89111197143674
+    },
+    {
+      "actual": 260000000,
+      "predicted_log_mlr": 421437078.0648315,
+      "residual_log_mlr": -161437078.0648315,
+      "absolute_percentage_error_log_mlr": 62.09118387108904
+    },
+    {
+      "actual": 320000000,
+      "predicted_log_mlr": 160023821.82631022,
+      "residual_log_mlr": 159976178.17368978,
+      "absolute_percentage_error_log_mlr": 49.992555679278055
+    },
+    {
+      "actual": 500000000,
+      "predicted_log_mlr": 659494769.0820688,
+      "residual_log_mlr": -159494769.0820688,
+      "absolute_percentage_error_log_mlr": 31.898953816413762
+    },
+    {
+      "actual": 295000000,
+      "predicted_log_mlr": 454131193.9620056,
+      "residual_log_mlr": -159131193.96200562,
+      "absolute_percentage_error_log_mlr": 53.94277761423919
+    },
+    {
+      "actual": 690000000,
+      "predicted_log_mlr": 531358335.3547356,
+      "residual_log_mlr": 158641664.6452644,
+      "absolute_percentage_error_log_mlr": 22.991545600762954
+    },
+    {
+      "actual": 615000000,
+      "predicted_log_mlr": 457183453.166226,
+      "residual_log_mlr": 157816546.83377397,
+      "absolute_percentage_error_log_mlr": 25.66122712744292
+    },
+    {
+      "actual": 159000000,
+      "predicted_log_mlr": 316327231.85378534,
+      "residual_log_mlr": -157327231.85378534,
+      "absolute_percentage_error_log_mlr": 98.94794456212914
+    },
+    {
+      "actual": 519000000,
+      "predicted_log_mlr": 364744467.02211314,
+      "residual_log_mlr": 154255532.97788686,
+      "absolute_percentage_error_log_mlr": 29.721682654698817
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 316672510.97617227,
+      "residual_log_mlr": 149892107.02382773,
+      "absolute_percentage_error_log_mlr": 32.126762562142616
+    },
+    {
+      "actual": 140000000,
+      "predicted_log_mlr": 287919077.89231145,
+      "residual_log_mlr": -147919077.89231145,
+      "absolute_percentage_error_log_mlr": 105.6564842087939
+    },
+    {
+      "actual": 140000000,
+      "predicted_log_mlr": 287919077.89231145,
+      "residual_log_mlr": -147919077.89231145,
+      "absolute_percentage_error_log_mlr": 105.6564842087939
+    },
+    {
+      "actual": 308000000,
+      "predicted_log_mlr": 455543065.6136583,
+      "residual_log_mlr": -147543065.6136583,
+      "absolute_percentage_error_log_mlr": 47.90359273170724
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 324533782.5875023,
+      "residual_log_mlr": 147285482.4124977,
+      "absolute_percentage_error_log_mlr": 31.2165045682265
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 613622519.5685638,
+      "residual_log_mlr": -147057901.56856382,
+      "absolute_percentage_error_log_mlr": 31.519299984415838
+    },
+    {
+      "actual": 252000000,
+      "predicted_log_mlr": 398100856.9342828,
+      "residual_log_mlr": -146100856.93428278,
+      "absolute_percentage_error_log_mlr": 57.97653052947729
+    },
+    {
+      "actual": 390000000,
+      "predicted_log_mlr": 244639783.65339476,
+      "residual_log_mlr": 145360216.34660524,
+      "absolute_percentage_error_log_mlr": 37.2718503452834
+    },
+    {
+      "actual": 120000000,
+      "predicted_log_mlr": 264842818.77220544,
+      "residual_log_mlr": -144842818.77220544,
+      "absolute_percentage_error_log_mlr": 120.70234897683787
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 327248677.555942,
+      "residual_log_mlr": 144570587.444058,
+      "absolute_percentage_error_log_mlr": 30.64109462424304
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 322457090.08884233,
+      "residual_log_mlr": 144107527.91115767,
+      "absolute_percentage_error_log_mlr": 30.886938775789822
+    },
+    {
+      "actual": 199000000,
+      "predicted_log_mlr": 341347397.4498894,
+      "residual_log_mlr": -142347397.44988942,
+      "absolute_percentage_error_log_mlr": 71.53135550245699
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 330737754.9748187,
+      "residual_log_mlr": 141081510.0251813,
+      "absolute_percentage_error_log_mlr": 29.90160014453443
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 606671782.9783385,
+      "residual_log_mlr": -140107164.97833848,
+      "absolute_percentage_error_log_mlr": 30.029530652994886
+    },
+    {
+      "actual": 230000000,
+      "predicted_log_mlr": 368794748.62702316,
+      "residual_log_mlr": -138794748.62702316,
+      "absolute_percentage_error_log_mlr": 60.345542881314415
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 603371715.1630567,
+      "residual_log_mlr": -136807097.16305673,
+      "absolute_percentage_error_log_mlr": 29.32221859203578
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 336238310.1417627,
+      "residual_log_mlr": 135580954.85823733,
+      "absolute_percentage_error_log_mlr": 28.735781880003845
+    },
+    {
+      "actual": 200000000,
+      "predicted_log_mlr": 334774051.7761888,
+      "residual_log_mlr": -134774051.7761888,
+      "absolute_percentage_error_log_mlr": 67.3870258880944
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 604818757.0076574,
+      "residual_log_mlr": -132999492.00765741,
+      "absolute_percentage_error_log_mlr": 28.188652281431835
+    },
+    {
+      "actual": 103000000,
+      "predicted_log_mlr": 235859394.25262108,
+      "residual_log_mlr": -132859394.25262108,
+      "absolute_percentage_error_log_mlr": 128.98970315788455
+    },
+    {
+      "actual": 590000000,
+      "predicted_log_mlr": 458710811.62926894,
+      "residual_log_mlr": 131289188.37073106,
+      "absolute_percentage_error_log_mlr": 22.252404808598484
+    },
+    {
+      "actual": 639000000,
+      "predicted_log_mlr": 508107374.1505363,
+      "residual_log_mlr": 130892625.8494637,
+      "absolute_percentage_error_log_mlr": 20.483979006175854
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 597006519.1886069,
+      "residual_log_mlr": -130441901.18860686,
+      "absolute_percentage_error_log_mlr": 27.9579496936064
+    },
+    {
+      "actual": 372000000,
+      "predicted_log_mlr": 243495769.0261673,
+      "residual_log_mlr": 128504230.9738327,
+      "absolute_percentage_error_log_mlr": 34.54414811124535
+    },
+    {
+      "actual": 370000000,
+      "predicted_log_mlr": 241509002.780834,
+      "residual_log_mlr": 128490997.21916601,
+      "absolute_percentage_error_log_mlr": 34.72729654572054
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 338572443.36785567,
+      "residual_log_mlr": 127992174.63214433,
+      "absolute_percentage_error_log_mlr": 27.43289347160576
+    },
+    {
+      "actual": 240000000,
+      "predicted_log_mlr": 365456816.38265526,
+      "residual_log_mlr": -125456816.38265526,
+      "absolute_percentage_error_log_mlr": 52.27367349277303
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 341613564.3868406,
+      "residual_log_mlr": 124951053.61315942,
+      "absolute_percentage_error_log_mlr": 26.781082146516184
+    },
+    {
+      "actual": 463000000,
+      "predicted_log_mlr": 338572443.36785567,
+      "residual_log_mlr": 124427556.63214433,
+      "absolute_percentage_error_log_mlr": 26.874202296359467
+    },
+    {
+      "actual": 337000000,
+      "predicted_log_mlr": 460399998.9874739,
+      "residual_log_mlr": -123399998.9874739,
+      "absolute_percentage_error_log_mlr": 36.61721038203973
+    },
+    {
+      "actual": 100000000,
+      "predicted_log_mlr": 222662990.91980514,
+      "residual_log_mlr": -122662990.91980514,
+      "absolute_percentage_error_log_mlr": 122.66299091980515
+    },
+    {
+      "actual": 258000000,
+      "predicted_log_mlr": 380402375.6975,
+      "residual_log_mlr": -122402375.69749999,
+      "absolute_percentage_error_log_mlr": 47.44278127810077
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 344202947.1077326,
+      "residual_log_mlr": 122361670.8922674,
+      "absolute_percentage_error_log_mlr": 26.22609305797539
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 344986793.35312,
+      "residual_log_mlr": 121577824.64687997,
+      "absolute_percentage_error_log_mlr": 26.058089267043382
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 350873892.7042036,
+      "residual_log_mlr": 120945372.2957964,
+      "absolute_percentage_error_log_mlr": 25.63383508636435
+    },
+    {
+      "actual": 190000000,
+      "predicted_log_mlr": 310396390.6532123,
+      "residual_log_mlr": -120396390.65321231,
+      "absolute_percentage_error_log_mlr": 63.36652139642753
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 348664991.9618624,
+      "residual_log_mlr": 117899626.03813761,
+      "absolute_percentage_error_log_mlr": 25.269731456176903
+    },
+    {
+      "actual": 430000000,
+      "predicted_log_mlr": 313705660.9894149,
+      "residual_log_mlr": 116294339.01058513,
+      "absolute_percentage_error_log_mlr": 27.04519511874073
+    },
+    {
+      "actual": 595000000,
+      "predicted_log_mlr": 480209871.2466204,
+      "residual_log_mlr": 114790128.75337958,
+      "absolute_percentage_error_log_mlr": 19.292458614013373
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 357271938.41658914,
+      "residual_log_mlr": 114547326.58341086,
+      "absolute_percentage_error_log_mlr": 24.27779768242631
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 352399137.25089175,
+      "residual_log_mlr": 114165480.74910825,
+      "absolute_percentage_error_log_mlr": 24.469382448779744
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 353184880.14489776,
+      "residual_log_mlr": 113379737.85510224,
+      "absolute_percentage_error_log_mlr": 24.3009721442491
+    },
+    {
+      "actual": 240000000,
+      "predicted_log_mlr": 352382406.9848734,
+      "residual_log_mlr": -112382406.98487341,
+      "absolute_percentage_error_log_mlr": 46.826002910363925
+    },
+    {
+      "actual": 460000000,
+      "predicted_log_mlr": 571951526.582402,
+      "residual_log_mlr": -111951526.58240199,
+      "absolute_percentage_error_log_mlr": 24.337288387478694
+    },
+    {
+      "actual": 287000000,
+      "predicted_log_mlr": 398792779.9268174,
+      "residual_log_mlr": -111792779.92681742,
+      "absolute_percentage_error_log_mlr": 38.95218812781095
+    },
+    {
+      "actual": 235000000,
+      "predicted_log_mlr": 346566099.3146406,
+      "residual_log_mlr": -111566099.31464058,
+      "absolute_percentage_error_log_mlr": 47.47493587857046
+    },
+    {
+      "actual": 718000000,
+      "predicted_log_mlr": 607149183.989129,
+      "residual_log_mlr": 110850816.01087105,
+      "absolute_percentage_error_log_mlr": 15.43883231349179
+    },
+    {
+      "actual": 718000000,
+      "predicted_log_mlr": 607149183.989129,
+      "residual_log_mlr": 110850816.01087105,
+      "absolute_percentage_error_log_mlr": 15.43883231349179
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 576997014.9969127,
+      "residual_log_mlr": -110432396.99691272,
+      "absolute_percentage_error_log_mlr": 23.669260963314777
+    },
+    {
+      "actual": 189000000,
+      "predicted_log_mlr": 299197648.3764478,
+      "residual_log_mlr": -110197648.3764478,
+      "absolute_percentage_error_log_mlr": 58.30563406161259
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 174447807.15120625,
+      "residual_log_mlr": 109564754.84879375,
+      "absolute_percentage_error_log_mlr": 38.577432659050395
+    },
+    {
+      "actual": 246000000,
+      "predicted_log_mlr": 353376800.4033638,
+      "residual_log_mlr": -107376800.40336382,
+      "absolute_percentage_error_log_mlr": 43.649105855025944
+    },
+    {
+      "actual": 289000000,
+      "predicted_log_mlr": 395924957.39605,
+      "residual_log_mlr": -106924957.39604998,
+      "absolute_percentage_error_log_mlr": 36.99825515434255
+    },
+    {
+      "actual": 223000000,
+      "predicted_log_mlr": 329872828.952703,
+      "residual_log_mlr": -106872828.952703,
+      "absolute_percentage_error_log_mlr": 47.92503540479955
+    },
+    {
+      "actual": 389000000,
+      "predicted_log_mlr": 282726880.3351931,
+      "residual_log_mlr": 106273119.6648069,
+      "absolute_percentage_error_log_mlr": 27.319568037225423
+    },
+    {
+      "actual": 389000000,
+      "predicted_log_mlr": 282726880.3351931,
+      "residual_log_mlr": 106273119.6648069,
+      "absolute_percentage_error_log_mlr": 27.319568037225423
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 389925632.55927306,
+      "residual_log_mlr": -105913070.55927306,
+      "absolute_percentage_error_log_mlr": 37.291685203442896
+    },
+    {
+      "actual": 390000000,
+      "predicted_log_mlr": 495442737.6377221,
+      "residual_log_mlr": -105442737.63772207,
+      "absolute_percentage_error_log_mlr": 27.036599394287713
+    },
+    {
+      "actual": 405000000,
+      "predicted_log_mlr": 299879004.9867827,
+      "residual_log_mlr": 105120995.01321727,
+      "absolute_percentage_error_log_mlr": 25.955801237831427
+    },
+    {
+      "actual": 225000000,
+      "predicted_log_mlr": 329872828.952703,
+      "residual_log_mlr": -104872828.952703,
+      "absolute_percentage_error_log_mlr": 46.61014620120134
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 179603161.36753738,
+      "residual_log_mlr": 104409400.63246262,
+      "absolute_percentage_error_log_mlr": 36.76224737991083
+    },
+    {
+      "actual": 1459607628,
+      "predicted_log_mlr": 1355626644.1672947,
+      "residual_log_mlr": 103980983.83270526,
+      "absolute_percentage_error_log_mlr": 7.123899727434506
+    },
+    {
+      "actual": 128000000,
+      "predicted_log_mlr": 229957420.8737725,
+      "residual_log_mlr": -101957420.8737725,
+      "absolute_percentage_error_log_mlr": 79.65423505763476
+    },
+    {
+      "actual": 128000000,
+      "predicted_log_mlr": 229301833.74994746,
+      "residual_log_mlr": -101301833.74994746,
+      "absolute_percentage_error_log_mlr": 79.14205761714645
+    },
+    {
+      "actual": 325000000,
+      "predicted_log_mlr": 425890408.09588414,
+      "residual_log_mlr": -100890408.09588414,
+      "absolute_percentage_error_log_mlr": 31.043202491041278
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 572279246.0569618,
+      "residual_log_mlr": -100459981.05696177,
+      "absolute_percentage_error_log_mlr": 21.292047296322625
+    },
+    {
+      "actual": 157000000,
+      "predicted_log_mlr": 257367212.14595345,
+      "residual_log_mlr": -100367212.14595345,
+      "absolute_percentage_error_log_mlr": 63.92816060251811
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 571677638.596169,
+      "residual_log_mlr": -99858373.596169,
+      "absolute_percentage_error_log_mlr": 21.164539264027084
+    },
+    {
+      "actual": 196000000,
+      "predicted_log_mlr": 294922023.0142721,
+      "residual_log_mlr": -98922023.0142721,
+      "absolute_percentage_error_log_mlr": 50.47041990524086
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 368727962.60457855,
+      "residual_log_mlr": 97836655.39542145,
+      "absolute_percentage_error_log_mlr": 20.96958312330093
+    },
+    {
+      "actual": 102000000,
+      "predicted_log_mlr": 199348755.35598812,
+      "residual_log_mlr": -97348755.35598812,
+      "absolute_percentage_error_log_mlr": 95.4399562313609
+    },
+    {
+      "actual": 170000000,
+      "predicted_log_mlr": 266856980.85442883,
+      "residual_log_mlr": -96856980.85442883,
+      "absolute_percentage_error_log_mlr": 56.97469462025225
+    },
+    {
+      "actual": 257000000,
+      "predicted_log_mlr": 353376800.4033638,
+      "residual_log_mlr": -96376800.40336382,
+      "absolute_percentage_error_log_mlr": 37.50070054605597
+    },
+    {
+      "actual": 111000000,
+      "predicted_log_mlr": 206147953.3450971,
+      "residual_log_mlr": -95147953.3450971,
+      "absolute_percentage_error_log_mlr": 85.71887688747486
+    },
+    {
+      "actual": 205000000,
+      "predicted_log_mlr": 299439761.2155387,
+      "residual_log_mlr": -94439761.21553868,
+      "absolute_percentage_error_log_mlr": 46.06817620270179
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 560708200.2800916,
+      "residual_log_mlr": -94143582.28009164,
+      "absolute_percentage_error_log_mlr": 20.17803722100754
+    },
+    {
+      "actual": 450000000,
+      "predicted_log_mlr": 356139456.5418121,
+      "residual_log_mlr": 93860543.45818788,
+      "absolute_percentage_error_log_mlr": 20.85789854626397
+    },
+    {
+      "actual": 339000000,
+      "predicted_log_mlr": 246297365.32841852,
+      "residual_log_mlr": 92702634.67158148,
+      "absolute_percentage_error_log_mlr": 27.345909932619904
+    },
+    {
+      "actual": 495000000,
+      "predicted_log_mlr": 402954674.7704891,
+      "residual_log_mlr": 92045325.2295109,
+      "absolute_percentage_error_log_mlr": 18.59501519788099
+    },
+    {
+      "actual": 370000000,
+      "predicted_log_mlr": 278436113.13095057,
+      "residual_log_mlr": 91563886.86904943,
+      "absolute_percentage_error_log_mlr": 24.746996451094443
+    },
+    {
+      "actual": 370000000,
+      "predicted_log_mlr": 278436113.13095057,
+      "residual_log_mlr": 91563886.86904943,
+      "absolute_percentage_error_log_mlr": 24.746996451094443
+    },
+    {
+      "actual": 249000000,
+      "predicted_log_mlr": 158520258.56554973,
+      "residual_log_mlr": 90479741.43445027,
+      "absolute_percentage_error_log_mlr": 36.33724555600412
+    },
+    {
+      "actual": 370000000,
+      "predicted_log_mlr": 281404758.14482975,
+      "residual_log_mlr": 88595241.85517025,
+      "absolute_percentage_error_log_mlr": 23.944659960856825
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 379480429.1131194,
+      "residual_log_mlr": 87084188.88688058,
+      "absolute_percentage_error_log_mlr": 18.664979196275137
+    },
+    {
+      "actual": 178000000,
+      "predicted_log_mlr": 263796015.4418385,
+      "residual_log_mlr": -85796015.4418385,
+      "absolute_percentage_error_log_mlr": 48.20000867519017
+    },
+    {
+      "actual": 245000000,
+      "predicted_log_mlr": 330657954.075484,
+      "residual_log_mlr": -85657954.07548398,
+      "absolute_percentage_error_log_mlr": 34.962430234891414
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 381314646.78226686,
+      "residual_log_mlr": 85249971.21773314,
+      "absolute_percentage_error_log_mlr": 18.271846584331676
+    },
+    {
+      "actual": 135000000,
+      "predicted_log_mlr": 220192314.4352468,
+      "residual_log_mlr": -85192314.4352468,
+      "absolute_percentage_error_log_mlr": 63.10541810018281
+    },
+    {
+      "actual": 147000000,
+      "predicted_log_mlr": 230384653.1370166,
+      "residual_log_mlr": -83384653.1370166,
+      "absolute_percentage_error_log_mlr": 56.724253834705166
+    },
+    {
+      "actual": 225000009,
+      "predicted_log_mlr": 306555492.0164029,
+      "residual_log_mlr": -81555483.0164029,
+      "absolute_percentage_error_log_mlr": 36.24687989074832
+    },
+    {
+      "actual": 245000000,
+      "predicted_log_mlr": 323249953.13847405,
+      "residual_log_mlr": -78249953.13847405,
+      "absolute_percentage_error_log_mlr": 31.93875638305063
+    },
+    {
+      "actual": 157000000,
+      "predicted_log_mlr": 235101079.48434836,
+      "residual_log_mlr": -78101079.48434836,
+      "absolute_percentage_error_log_mlr": 49.74591049958494
+    },
+    {
+      "actual": 205000000,
+      "predicted_log_mlr": 280899538.53846943,
+      "residual_log_mlr": -75899538.53846943,
+      "absolute_percentage_error_log_mlr": 37.024165140716796
+    },
+    {
+      "actual": 227000000,
+      "predicted_log_mlr": 302617976.4747471,
+      "residual_log_mlr": -75617976.47474712,
+      "absolute_percentage_error_log_mlr": 33.31188390958023
+    },
+    {
+      "actual": 177500000,
+      "predicted_log_mlr": 251423014.15750858,
+      "residual_log_mlr": -73923014.15750858,
+      "absolute_percentage_error_log_mlr": 41.64676853944145
+    },
+    {
+      "actual": 292000000,
+      "predicted_log_mlr": 365686311.50401694,
+      "residual_log_mlr": -73686311.50401694,
+      "absolute_percentage_error_log_mlr": 25.235038186307168
+    },
+    {
+      "actual": 190000000,
+      "predicted_log_mlr": 263196643.17531642,
+      "residual_log_mlr": -73196643.17531642,
+      "absolute_percentage_error_log_mlr": 38.52454903964022
+    },
+    {
+      "actual": 471819265,
+      "predicted_log_mlr": 544880429.402476,
+      "residual_log_mlr": -73061164.40247595,
+      "absolute_percentage_error_log_mlr": 15.484989660707466
+    },
+    {
+      "actual": 395000000,
+      "predicted_log_mlr": 467566302.3843709,
+      "residual_log_mlr": -72566302.38437092,
+      "absolute_percentage_error_log_mlr": 18.371215793511624
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 394123384.1095446,
+      "residual_log_mlr": 72441233.89045542,
+      "absolute_percentage_error_log_mlr": 15.526516820110741
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 394556873.2933762,
+      "residual_log_mlr": 72007744.7066238,
+      "absolute_percentage_error_log_mlr": 15.433605963370287
+    },
+    {
+      "actual": 475000000,
+      "predicted_log_mlr": 402996006.3809653,
+      "residual_log_mlr": 72003993.61903471,
+      "absolute_percentage_error_log_mlr": 15.15873549874415
+    },
+    {
+      "actual": 159000000,
+      "predicted_log_mlr": 230692825.45199087,
+      "residual_log_mlr": -71692825.45199087,
+      "absolute_percentage_error_log_mlr": 45.089827328296145
+    },
+    {
+      "actual": 210000000,
+      "predicted_log_mlr": 138892969.21954322,
+      "residual_log_mlr": 71107030.78045678,
+      "absolute_percentage_error_log_mlr": 33.86049084783656
+    },
+    {
+      "actual": 180000000,
+      "predicted_log_mlr": 250435414.47683355,
+      "residual_log_mlr": -70435414.47683355,
+      "absolute_percentage_error_log_mlr": 39.13078582046308
+    },
+    {
+      "actual": 224000999,
+      "predicted_log_mlr": 153873390.63733992,
+      "residual_log_mlr": 70127608.36266008,
+      "absolute_percentage_error_log_mlr": 31.306828396180535
+    },
+    {
+      "actual": 292000000,
+      "predicted_log_mlr": 361828548.57048637,
+      "residual_log_mlr": -69828548.57048637,
+      "absolute_percentage_error_log_mlr": 23.913886496741906
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 214858298.52787057,
+      "residual_log_mlr": 69154263.47212943,
+      "absolute_percentage_error_log_mlr": 24.349015756609184
+    },
+    {
+      "actual": 201503268,
+      "predicted_log_mlr": 132555867.67064461,
+      "residual_log_mlr": 68947400.32935539,
+      "absolute_percentage_error_log_mlr": 34.21651718787776
+    },
+    {
+      "actual": 316000000,
+      "predicted_log_mlr": 384757952.7791156,
+      "residual_log_mlr": -68757952.77911562,
+      "absolute_percentage_error_log_mlr": 21.75884581617583
+    },
+    {
+      "actual": 397000000,
+      "predicted_log_mlr": 330035058.95579934,
+      "residual_log_mlr": 66964941.04420066,
+      "absolute_percentage_error_log_mlr": 16.867743336070696
+    },
+    {
+      "actual": 176000000,
+      "predicted_log_mlr": 242773830.23309672,
+      "residual_log_mlr": -66773830.23309672,
+      "absolute_percentage_error_log_mlr": 37.93967626880496
+    },
+    {
+      "actual": 201503268,
+      "predicted_log_mlr": 134850047.02052206,
+      "residual_log_mlr": 66653220.97947794,
+      "absolute_percentage_error_log_mlr": 33.07798510715863
+    },
+    {
+      "actual": 190000000,
+      "predicted_log_mlr": 256355688.00771526,
+      "residual_log_mlr": -66355688.007715255,
+      "absolute_percentage_error_log_mlr": 34.924046319850135
+    },
+    {
+      "actual": 248000000,
+      "predicted_log_mlr": 313127239.1653576,
+      "residual_log_mlr": -65127239.16535759,
+      "absolute_percentage_error_log_mlr": 26.26098353441838
+    },
+    {
+      "actual": 218000000,
+      "predicted_log_mlr": 153873390.63733992,
+      "residual_log_mlr": 64126609.36266008,
+      "absolute_percentage_error_log_mlr": 29.415875854431228
+    },
+    {
+      "actual": 355000000,
+      "predicted_log_mlr": 418437051.9296354,
+      "residual_log_mlr": -63437051.929635406,
+      "absolute_percentage_error_log_mlr": 17.869592092855044
+    },
+    {
+      "actual": 232000000,
+      "predicted_log_mlr": 168645272.40798762,
+      "residual_log_mlr": 63354727.592012376,
+      "absolute_percentage_error_log_mlr": 27.308072237936372
+    },
+    {
+      "actual": 219000000,
+      "predicted_log_mlr": 281509196.12177193,
+      "residual_log_mlr": -62509196.12177193,
+      "absolute_percentage_error_log_mlr": 28.54301192774974
+    },
+    {
+      "actual": 300000000,
+      "predicted_log_mlr": 361828548.57048637,
+      "residual_log_mlr": -61828548.57048637,
+      "absolute_percentage_error_log_mlr": 20.60951619016212
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 345778664.7201578,
+      "residual_log_mlr": -61766102.7201578,
+      "absolute_percentage_error_log_mlr": 21.747665767036672
+    },
+    {
+      "actual": 316999000,
+      "predicted_log_mlr": 376682858.49490833,
+      "residual_log_mlr": -59683858.49490833,
+      "absolute_percentage_error_log_mlr": 18.827775007147764
+    },
+    {
+      "actual": 336000000,
+      "predicted_log_mlr": 276740015.41708106,
+      "residual_log_mlr": 59259984.58291894,
+      "absolute_percentage_error_log_mlr": 17.63690017348778
+    },
+    {
+      "actual": 341000000,
+      "predicted_log_mlr": 400213456.0515986,
+      "residual_log_mlr": -59213456.05159861,
+      "absolute_percentage_error_log_mlr": 17.36464986850399
+    },
+    {
+      "actual": 127000000,
+      "predicted_log_mlr": 185835547.92160952,
+      "residual_log_mlr": -58835547.92160952,
+      "absolute_percentage_error_log_mlr": 46.327203087881514
+    },
+    {
+      "actual": 250000000,
+      "predicted_log_mlr": 308832797.9437955,
+      "residual_log_mlr": -58832797.9437955,
+      "absolute_percentage_error_log_mlr": 23.5331191775182
+    },
+    {
+      "actual": 145000000,
+      "predicted_log_mlr": 203625697.49322885,
+      "residual_log_mlr": -58625697.49322885,
+      "absolute_percentage_error_log_mlr": 40.43151551257162
+    },
+    {
+      "actual": 288000000,
+      "predicted_log_mlr": 346277690.43551326,
+      "residual_log_mlr": -58277690.43551326,
+      "absolute_percentage_error_log_mlr": 20.23530917899766
+    },
+    {
+      "actual": 284012562,
+      "predicted_log_mlr": 341353557.677145,
+      "residual_log_mlr": -57340995.677145004,
+      "absolute_percentage_error_log_mlr": 20.189598401335854
+    },
+    {
+      "actual": 466564618,
+      "predicted_log_mlr": 409267606.11293924,
+      "residual_log_mlr": 57297011.88706076,
+      "absolute_percentage_error_log_mlr": 12.28061659126084
+    },
+    {
+      "actual": 242000000,
+      "predicted_log_mlr": 299275184.9880782,
+      "residual_log_mlr": -57275184.98807818,
+      "absolute_percentage_error_log_mlr": 23.667431813255448
+    }
+  ],
+  "formula": "log(harga) = intercept + b1*usia_mobil + b2*km + b3*merk + b4*transmisi + b5*penjual + b6*jenis_mobil + dummy_jenis",
+  "interpretation_note": "Koefisien pada model log dapat dibaca sebagai perkiraan perubahan persentase harga, dengan asumsi fitur lain tetap."
+}

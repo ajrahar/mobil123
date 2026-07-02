@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -435,19 +436,39 @@ def build_regression_report(clean_df):
 
 def export_outputs(raw_df, clean_df, metadata, regression_report, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
-    raw_df.replace({np.nan: None}).to_json(output_dir / "mobil123_raw.json", orient="records", indent=2)
-    clean_df.to_json(output_dir / "mobil123_clean.json", orient="records", indent=2)
-    clean_df.to_csv(output_dir / "mobil123_clean.csv", index=False)
-    with (output_dir / "mobil123_metadata.json").open("w") as file:
+    raw_file = output_dir / "mobil123_raw.json"
+    clean_file = output_dir / "mobil123_clean.json"
+    clean_csv_file = output_dir / "mobil123_clean.csv"
+    metadata_file = output_dir / "mobil123_metadata.json"
+    regression_file = output_dir / "mobil123_regression.json"
+
+    raw_df.replace({np.nan: None}).to_json(raw_file, orient="records", indent=2)
+    clean_df.to_json(clean_file, orient="records", indent=2)
+    clean_df.to_csv(clean_csv_file, index=False)
+    with metadata_file.open("w") as file:
         json.dump(metadata, file, indent=2)
-    with (output_dir / "mobil123_regression.json").open("w") as file:
+    with regression_file.open("w") as file:
         json.dump(regression_report, file, indent=2)
 
     try:
-        clean_df.to_parquet(output_dir / "mobil123_clean.parquet", index=False)
+        parquet_file = output_dir / "mobil123_clean.parquet"
+        clean_df.to_parquet(parquet_file, index=False)
         parquet_status = "saved"
     except Exception as exc:
+        parquet_file = None
         parquet_status = f"skipped: {exc.__class__.__name__}: {exc}"
+
+    public_data_dir = Path("public") / "data"
+    public_data_dir.mkdir(parents=True, exist_ok=True)
+
+    artifacts = [raw_file, clean_file, clean_csv_file, metadata_file, regression_file]
+    if parquet_file is not None and parquet_file.exists():
+        artifacts.append(parquet_file)
+
+    for artifact in artifacts:
+        destination = public_data_dir / artifact.name
+        if artifact.resolve() != destination.resolve():
+            shutil.copy2(artifact, destination)
 
     return parquet_status
 
