@@ -139,6 +139,37 @@ def parse_harga(raw):
     return int(digits) if digits else None
 
 
+def impute_price_by_vehicle_type(df):
+    """Impute harga kosong dengan rata-rata harga per jenis_mobil.
+
+    Aturan:
+    - Hanya baris yang punya jenis_mobil dan harga_asli kosong yang eligible.
+    - Jika suatu jenis_mobil tidak punya harga referensi sama sekali, harga tetap kosong.
+    """
+    df["harga"] = pd.to_numeric(df["harga_asli"], errors="coerce")
+    df["harga_imputed"] = False
+    df["imputation_source"] = None
+
+    mean_price_by_jenis = (
+        df.dropna(subset=["jenis_mobil"])
+        .groupby("jenis_mobil", dropna=True)["harga"]
+        .mean()
+    )
+
+    eligible_mask = df["harga"].isna() & df["jenis_mobil"].notna()
+    imputed_values = df.loc[eligible_mask, "jenis_mobil"].map(mean_price_by_jenis)
+    successful_mask = eligible_mask.copy()
+    successful_mask.loc[eligible_mask] = imputed_values.notna().values
+
+    df.loc[eligible_mask, "harga"] = imputed_values
+    df.loc[successful_mask, "harga_imputed"] = True
+    df.loc[successful_mask, "imputation_source"] = "mean_by_jenis_mobil"
+
+    df["harga"] = pd.to_numeric(df["harga"], errors="coerce").round().astype("Int64")
+    df["harga_asli"] = pd.to_numeric(df["harga_asli"], errors="coerce").astype("Int64")
+    return mean_price_by_jenis
+
+
 def clean_data(raw_path):
     df_raw = pd.read_csv(raw_path)
     df = df_raw.dropna(how="all").reset_index(drop=True)
@@ -166,7 +197,9 @@ def clean_data(raw_path):
     df["transmisi"] = df["item 2"]
     df["lokasi"] = df["item 3"]
     df["penjual"] = df["item 4"]
-    df["harga"] = df["listing__price"].apply(parse_harga)
+    df["harga_asli"] = df["listing__price"].apply(parse_harga)
+
+    impute_price_by_vehicle_type(df)
 
     dummy_jenis = pd.get_dummies(df["jenis_mobil"], prefix="is").astype(int)
     dummy_jenis.columns = [column.lower() for column in dummy_jenis.columns]
@@ -184,14 +217,39 @@ def clean_data(raw_path):
         "km",
         "lokasi",
         "penjual",
+        "harga_asli",
+        "harga_imputed",
+        "imputation_source",
         "harga",
     ]
     clean = df[final_cols].copy()
-    clean = clean.replace({np.nan: None})
+    clean = clean.where(pd.notna(clean), None)
     return df_raw, clean
 
 
 def build_metadata(raw_df, clean_df):
+    harga_final = pd.to_numeric(clean_df["harga"], errors="coerce")
+    harga_asli = pd.to_numeric(clean_df["harga_asli"], errors="coerce")
+    missing_jenis_mask = clean_df["jenis_mobil"].isna()
+    missing_harga_with_jenis_mask = harga_asli.isna() & clean_df["jenis_mobil"].notna()
+    harga_imputed_mask = clean_df["harga_imputed"].fillna(False).astype(bool)
+
+    jenis_with_reference = (
+        clean_df.dropna(subset=["jenis_mobil"])
+        .groupby("jenis_mobil", dropna=True)["harga_asli"]
+        .apply(lambda series: pd.to_numeric(series, errors="coerce").notna().sum())
+    )
+    jenis_without_price_reference = sorted(jenis_with_reference[jenis_with_reference == 0].index.tolist())
+
+    mean_price_by_jenis = (
+        clean_df.dropna(subset=["jenis_mobil"])
+        .groupby("jenis_mobil", dropna=True)["harga"]
+        .mean()
+        .round()
+        .dropna()
+        .sort_values(ascending=False)
+    )
+
     priced = clean_df.dropna(subset=["harga"])
     numeric_cols = [
         column
@@ -203,8 +261,19 @@ def build_metadata(raw_df, clean_df):
     return {
         "raw_rows": int(len(raw_df)),
         "clean_rows": int(len(clean_df)),
-        "priced_rows": int(clean_df["harga"].notna().sum()),
-        "missing_price_rows": int(clean_df["harga"].isna().sum()),
+        "priced_rows": int(harga_final.notna().sum()),
+        "missing_price_rows": int(harga_final.isna().sum()),
+        "priced_rows_original": int(harga_asli.notna().sum()),
+        "missing_price_rows_original": int(harga_asli.isna().sum()),
+        "missing_jenis_rows": int(missing_jenis_mask.sum()),
+        "rows_missing_price_with_jenis": int(missing_harga_with_jenis_mask.sum()),
+        "rows_price_imputed_by_jenis": int(harga_imputed_mask.sum()),
+        "rows_still_missing_price_after_imputation": int(harga_final.isna().sum()),
+        "jenis_without_price_reference": jenis_without_price_reference,
+        "mean_price_by_jenis": [
+            {"jenis_mobil": jenis, "mean_harga": int(price)}
+            for jenis, price in mean_price_by_jenis.items()
+        ],
         "generated_from": "mobil123_raw.csv",
         "columns": clean_df.columns.tolist(),
         "correlation": {
@@ -297,6 +366,34 @@ def build_regression_report(clean_df):
     return {
         "model_name": "Multiple Linear Regression",
         "selected_model": "Log-target Multiple Linear Regression",
+        "research_flow": [
+            {
+                "phase": "1. Data Intake",
+                "description": "Load CSV mentah, buang baris yang seluruh kolomnya kosong, lalu audit kelengkapan data per kolom.",
+            },
+            {
+                "phase": "2. Feature Engineering",
+                "description": "Ekstrak tahun, merk, tipe, jenis_mobil, parsing km, normalisasi transmisi/lokasi/penjual, dan bangun dummy jenis mobil.",
+            },
+            {
+                "phase": "3. Missing Data Handling",
+                "description": "Hitung jumlah jenis_mobil yang kosong. Untuk baris dengan jenis_mobil ada tetapi harga kosong, lakukan imputasi rata-rata harga per jenis_mobil.",
+            },
+            {
+                "phase": "4. Modeling",
+                "description": "Bandingkan baseline MLR pada harga mentah vs MLR dengan target log(harga), lalu pilih model dengan performa terbaik.",
+            },
+            {
+                "phase": "5. Evaluation",
+                "description": "Evaluasi dengan train/test split, R2, MAE skala Rupiah, residual, dan ranking koefisien untuk interpretasi faktor harga.",
+            },
+        ],
+        "testing_protocol": [
+            "Uji ketersediaan data: cek missing tahun, km, merk, transmisi, jenis_mobil, harga.",
+            "Uji quality imputasi: hanya imputasi jika jenis_mobil tersedia dan jenis tersebut punya harga referensi.",
+            "Uji performa model: R2 dan MAE pada data test agar tidak hanya menilai data train.",
+            "Uji interpretasi: cek koefisien paling besar positif/negatif dan error prediksi paling tinggi.",
+        ],
         "target": "log_harga",
         "target_original": "harga",
         "target_unit": "log Rupiah, converted back to Rupiah for MAE",

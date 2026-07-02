@@ -686,15 +686,22 @@ function ModelComparison({ models }) {
   );
 }
 
-function ProcessingPage({ regression }) {
+function ProcessingPage({ regression, metadata }) {
   const steps = [
-    ["Load", "Membaca mobil123_raw.csv lalu membuang baris yang seluruh kolomnya kosong."],
-    ["Ekstraksi", "Mengambil tahun dari ellipsize, memecah merk dan tipe dari listing__rating-model, lalu fallback ke ellipsize jika model kosong."],
-    ["Normalisasi", "Mengubah teks kilometer seperti 40 - 45K KM menjadi angka midpoint dan harga Rupiah menjadi integer."],
-    ["Feature", "Membuat kolom jenis_mobil serta dummy is_suv, is_mpv, is_sedan, dan jenis lain yang muncul."],
-    ["Multiple Linear Regression", "Model regresi linear berganda dibuat karena variabel X lebih dari satu: usia_mobil, km, merk, transmisi, penjual, jenis_mobil, dan dummy jenis mobil."],
-    ["Export", "Menyimpan raw JSON, clean JSON, clean CSV, metadata, parquet, dan regression JSON untuk dipakai React."],
+    ["Load & Audit Awal", "Membaca mobil123_raw.csv, membuang baris kosong total, lalu menghitung kelengkapan tiap kolom sebagai baseline kualitas data."],
+    ["Ekstraksi Fitur Utama", "Ekstraksi tahun, merk, tipe, jenis_mobil, parsing km, serta normalisasi transmisi, lokasi, dan penjual dari kolom mentah."],
+    ["Audit Missing Jenis Mobil", "Menghitung jumlah baris jenis_mobil kosong secara eksplisit agar terlihat gap data kategori body type sebelum modeling."],
+    ["Imputasi Harga per Jenis", "Jika jenis_mobil ada tetapi harga kosong, harga diisi dengan rata-rata harga pada jenis_mobil yang sama. Jika suatu jenis tidak punya referensi harga sama sekali, nilai tetap kosong agar tidak menebak."],
+    ["Modeling & Perbandingan", "Membandingkan MLR harga mentah vs MLR log(harga), lalu memilih model terbaik berdasar R2 test dan MAE test."],
+    ["Pengujian & Interpretasi", "Meninjau residual, error prediksi, dan koefisien terkuat agar hasil model dapat dijelaskan secara statistik dan bisnis."],
+    ["Publikasi Hasil", "Menyimpan clean data, metadata audit, dan report regresi agar seluruh alur dapat ditelusuri ulang di dashboard."],
   ];
+
+  const imputedRows = metadata?.rows_price_imputed_by_jenis || 0;
+  const missingJenisRows = metadata?.missing_jenis_rows || 0;
+  const unresolvedPriceRows = metadata?.rows_still_missing_price_after_imputation || 0;
+  const imputableMissingRows = metadata?.rows_missing_price_with_jenis || 0;
+  const imputationCoverage = imputableMissingRows ? (imputedRows / imputableMissingRows) * 100 : 0;
 
   return (
     <>
@@ -704,6 +711,15 @@ function ProcessingPage({ regression }) {
           <StatCard label="R2 test" value={regression.r2_test.toFixed(3)} hint="di skala log harga" />
           <StatCard label="MAE test" value={compactPrice(regression.mae_test)} hint="rata-rata error absolut" />
           <StatCard label="Median APE" value={`${regression.median_ape_test.toFixed(1)}%`} hint="median error persentase" />
+        </section>
+      ) : null}
+
+      {metadata ? (
+        <section className="stats-grid">
+          <StatCard label="Jenis mobil kosong" value={number.format(missingJenisRows)} hint="baris tanpa kategori jenis_mobil" />
+          <StatCard label="Harga diimputasi" value={number.format(imputedRows)} hint="harga terisi dari mean per jenis_mobil" />
+          <StatCard label="Coverage imputasi" value={`${imputationCoverage.toFixed(1)}%`} hint="dari baris harga kosong yang punya jenis_mobil" />
+          <StatCard label="Sisa harga kosong" value={number.format(unresolvedPriceRows)} hint="butuh data referensi tambahan" />
         </section>
       ) : null}
 
@@ -728,6 +744,49 @@ function ProcessingPage({ regression }) {
           </div>
         </SectionCard>
       </section>
+
+      <section className="grid-two">
+        <SectionCard title="Audit Missing & Imputasi Harga">
+          <ul className="notes">
+            <li>Total baris clean: {number.format(metadata?.clean_rows || 0)}.</li>
+            <li>Baris jenis_mobil kosong: {number.format(missingJenisRows)}.</li>
+            <li>Baris harga asli kosong: {number.format(metadata?.missing_price_rows_original || 0)}.</li>
+            <li>Baris harga kosong tetapi punya jenis_mobil: {number.format(imputableMissingRows)}.</li>
+            <li>Baris berhasil diimputasi dengan mean per jenis_mobil: {number.format(imputedRows)}.</li>
+            <li>Baris tetap kosong setelah imputasi: {number.format(unresolvedPriceRows)}.</li>
+          </ul>
+        </SectionCard>
+
+        <SectionCard title="Rata-rata Harga per Jenis Mobil (Top 10)">
+          <BarChart
+            data={(metadata?.mean_price_by_jenis || []).slice(0, 10).map((item) => ({ label: item.jenis_mobil, value: item.mean_harga }))}
+            color={COLORS[3]}
+            valueFormat={(value) => compactPrice(value)}
+          />
+        </SectionCard>
+      </section>
+
+      {regression ? (
+        <section className="grid-two">
+          <SectionCard title="Alur Penelitian">
+            <div className="process-list">
+              {(regression.research_flow || []).map((item) => (
+                <div className="process-step" key={item.phase}>
+                  <strong>{item.phase}</strong>
+                  <p>{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+          <SectionCard title="Alur Pengujian">
+            <ol className="ordered-notes">
+              {(regression.testing_protocol || []).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ol>
+          </SectionCard>
+        </section>
+      ) : null}
 
       {regression ? (
         <section className="grid-two">
@@ -934,6 +993,7 @@ function App() {
   const [rows, setRows] = useState([]);
   const [rawRows, setRawRows] = useState([]);
   const [regression, setRegression] = useState(null);
+  const [metadata, setMetadata] = useState(null);
   const [page, setPage] = useState(currentHash());
   const [error, setError] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
@@ -948,11 +1008,13 @@ function App() {
     Promise.all([
       fetch("/data/mobil123_clean.json").then((response) => response.json()),
       fetch("/data/mobil123_raw.json").then((response) => response.json()),
+      fetch("/data/mobil123_metadata.json").then((response) => response.json()),
       fetch("/data/mobil123_regression.json").then((response) => response.json()),
     ])
-      .then(([clean, raw, regressionReport]) => {
+      .then(([clean, raw, metadataReport, regressionReport]) => {
         setRows(clean);
         setRawRows(raw);
+        setMetadata(metadataReport);
         setRegression(regressionReport);
       })
       .catch((err) => setError(`Gagal load data: ${err.message}`));
@@ -1023,7 +1085,7 @@ function App() {
     dashboard: <DashboardPage rows={rows} filtered={filtered} priced={priced} filters={filters} setFilters={setFilters} options={options} />,
     raw: <RawPage rawRows={rawRows} />,
     clean: <CleanPage rows={rows} />,
-    processing: <ProcessingPage regression={regression} />,
+    processing: <ProcessingPage regression={regression} metadata={metadata} />,
     eda: <EdaPage rows={rows} priced={allPriced} />,
     correlation: <CorrelationPage priced={allPriced} />,
     conclusion: <ConclusionPage rows={rows} priced={allPriced} regression={regression} />,
