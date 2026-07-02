@@ -1,10 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { COLORS, defaultFilters, routes } from "./config.js";
-
-const h = React.createElement;
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const number = new Intl.NumberFormat("id-ID");
+
 function compactPrice(value) {
   if (!Number.isFinite(value)) return "-";
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} M`;
@@ -46,14 +53,18 @@ function averageBy(rows, key, valueKey = "harga") {
     current.count += 1;
     map.set(label, current);
   });
-  return [...map.values()].map((item) => ({ label: item.label, value: item.total / item.count, count: item.count })).sort((a, b) => b.value - a.value);
+  return [...map.values()]
+    .map((item) => ({ label: item.label, value: item.total / item.count, count: item.count }))
+    .sort((a, b) => b.value - a.value);
 }
 
 function missingSummary(rows, columns) {
-  return columns.map((column) => ({
-    label: column,
-    value: rows.filter((row) => row[column] === null || row[column] === undefined || row[column] === "").length,
-  })).sort((a, b) => b.value - a.value);
+  return columns
+    .map((column) => ({
+      label: column,
+      value: rows.filter((row) => row[column] === null || row[column] === undefined || row[column] === "").length,
+    }))
+    .sort((a, b) => b.value - a.value);
 }
 
 function outlierSummary(rows, key = "harga") {
@@ -64,7 +75,7 @@ function outlierSummary(rows, key = "harga") {
   const low = q1 - 1.5 * iqr;
   const high = q3 + 1.5 * iqr;
   const outliers = rows.filter((row) => Number.isFinite(row[key]) && (row[key] < low || row[key] > high));
-  return { q1, q3, low, high, outliers };
+  return { low, high, outliers };
 }
 
 function histogram(rows, key, bins = 10, labeler = compactPrice) {
@@ -73,6 +84,7 @@ function histogram(rows, key, bins = 10, labeler = compactPrice) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const width = (max - min) / bins || 1;
+
   return Array.from({ length: bins }, (_, index) => {
     const start = min + index * width;
     const end = index === bins - 1 ? max : start + width;
@@ -99,11 +111,16 @@ function correlation(rows, columns) {
 }
 
 function correlationInsights(rows) {
-  const columns = ["tahun", "km", "is_suv", "is_mpv", "is_sedan", "is_hatchback", "is_coupe", "is_pickup"].filter((column) => rows.some((row) => Number.isFinite(row[column])));
-  return columns.map((column) => {
-    const value = correlation(rows, ["harga", column])[0][1];
-    return { label: column, value };
-  }).filter((item) => Number.isFinite(item.value)).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const columns = ["tahun", "km", "is_suv", "is_mpv", "is_sedan", "is_hatchback", "is_coupe", "is_pickup"].filter((column) =>
+    rows.some((row) => Number.isFinite(row[column]))
+  );
+  return columns
+    .map((column) => {
+      const value = correlation(rows, ["harga", column])[0][1];
+      return { label: column, value };
+    })
+    .filter((item) => Number.isFinite(item.value))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
 }
 
 function currentHash() {
@@ -111,33 +128,76 @@ function currentHash() {
   return routes.some(([key]) => key === hash) ? hash : "landing";
 }
 
-function Card({ title, children, className = "" }) {
-  return h("section", { className: `card ${className}` }, title ? h("h2", null, title) : null, children);
+function SectionCard({ title, children, className = "" }) {
+  return (
+    <Card className={className}>
+      {title ? (
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+      ) : null}
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
 }
 
-function Stat({ label, value, hint }) {
-  return h("div", { className: "stat" }, h("span", null, label), h("strong", null, value), h("small", null, hint));
+function StatCard({ label, value, hint }) {
+  return (
+    <Card className="stat-card bg-[color:var(--color-surface-lowest)]">
+      <CardContent className="space-y-2 p-6">
+        <p className="text-sm font-medium text-[color:var(--color-on-surface-muted)]">{label}</p>
+        <p className="font-['Manrope',sans-serif] text-4xl leading-none text-[color:var(--color-on-surface)]">{value}</p>
+        <p className="text-xs text-[color:var(--color-on-surface-muted)]">{hint}</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 function BarChart({ data, valueFormat = number.format, color = COLORS[0], onBarClick }) {
   const max = Math.max(1, ...data.map((item) => item.value));
-  return h("div", { className: "bars" }, data.map((item) =>
-    h("button", { className: `bar-row ${onBarClick ? "clickable" : ""}`, key: item.label, onClick: () => onBarClick?.(item) },
-      h("span", { className: "bar-label", title: item.label }, item.label),
-      h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: `${(item.value / max) * 100}%`, background: color } })),
-      h("span", { className: "bar-value" }, valueFormat(item.value, item))
-    )
-  ));
+  return (
+    <div className="bars">
+      {data.map((item) => (
+        <button
+          className={`bar-row ${onBarClick ? "clickable" : ""}`}
+          key={item.label}
+          onClick={() => onBarClick?.(item)}
+          type="button"
+        >
+          <span className="bar-label" title={item.label}>
+            {item.label}
+          </span>
+          <div className="bar-track">
+            <div className="bar-fill" style={{ width: `${(item.value / max) * 100}%`, background: color }} />
+          </div>
+          <span className="bar-value">{valueFormat(item.value, item)}</span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function Histogram({ data, color = COLORS[1] }) {
+  if (!data.length) return <div className="empty">Tidak ada data untuk histogram.</div>;
   const max = Math.max(1, ...data.map((item) => item.value));
-  return h("div", { className: "histogram" }, data.map((item, index) =>
-    h("div", { className: "hist-col", key: index, title: `${item.label}: ${item.value}` },
-      h("div", { className: "hist-bar", style: { height: `${Math.max(4, (item.value / max) * 100)}%`, background: color } }),
-      h("span", null, item.label)
-    )
-  ));
+  return (
+    <div className="histogram">
+      {data.map((item, index) => (
+        <div className="hist-col" key={index} title={`${item.label}: ${item.value}`}>
+          <div className="hist-track">
+            <div
+              className="hist-bar"
+              style={{
+                height: `${Math.max(8, (Math.sqrt(item.value) / Math.sqrt(max)) * 100)}%`,
+                background: color,
+              }}
+            />
+          </div>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function ScatterPlot({ rows, xKey, yKey, xLabel, yLabel, color = COLORS[2] }) {
@@ -145,20 +205,29 @@ function ScatterPlot({ rows, xKey, yKey, xLabel, yLabel, color = COLORS[2] }) {
   const width = 620;
   const height = 300;
   const pad = 42;
-  if (!points.length) return h("div", { className: "empty" }, "Tidak ada data untuk grafik ini.");
+  if (!points.length) return <div className="empty">Tidak ada data untuk grafik ini.</div>;
+
   const xMin = Math.min(...points.map((row) => row[xKey]));
   const xMax = Math.max(...points.map((row) => row[xKey]));
   const yMin = Math.min(...points.map((row) => row[yKey]));
   const yMax = Math.max(...points.map((row) => row[yKey]));
-  const sx = (value) => pad + ((value - xMin) / ((xMax - xMin) || 1)) * (width - pad * 1.4);
-  const sy = (value) => height - pad - ((value - yMin) / ((yMax - yMin) || 1)) * (height - pad * 1.4);
+  const sx = (value) => pad + ((value - xMin) / (xMax - xMin || 1)) * (width - pad * 1.4);
+  const sy = (value) => height - pad - ((value - yMin) / (yMax - yMin || 1)) * (height - pad * 1.4);
 
-  return h("svg", { className: "scatter", viewBox: `0 0 ${width} ${height}`, role: "img" },
-    h("line", { x1: pad, y1: height - pad, x2: width - 16, y2: height - pad }),
-    h("line", { x1: pad, y1: 14, x2: pad, y2: height - pad }),
-    h("text", { x: width / 2, y: height - 8, textAnchor: "middle" }, xLabel),
-    h("text", { x: 15, y: height / 2, transform: `rotate(-90 15 ${height / 2})`, textAnchor: "middle" }, yLabel),
-    points.slice(0, 900).map((row, index) => h("circle", { key: index, cx: sx(row[xKey]), cy: sy(row[yKey]), r: 3, fill: color, opacity: 0.48 }))
+  return (
+    <svg className="scatter" viewBox={`0 0 ${width} ${height}`} role="img">
+      <line x1={pad} y1={height - pad} x2={width - 16} y2={height - pad} />
+      <line x1={pad} y1={14} x2={pad} y2={height - pad} />
+      <text x={width / 2} y={height - 8} textAnchor="middle">
+        {xLabel}
+      </text>
+      <text x={15} y={height / 2} transform={`rotate(-90 15 ${height / 2})`} textAnchor="middle">
+        {yLabel}
+      </text>
+      {points.slice(0, 900).map((row, index) => (
+        <circle key={index} cx={sx(row[xKey])} cy={sy(row[yKey])} r="3" fill={color} opacity="0.48" />
+      ))}
+    </svg>
   );
 }
 
@@ -167,222 +236,454 @@ function PredictionPlot({ rows }) {
   const width = 620;
   const height = 300;
   const pad = 42;
-  if (!points.length) return h("div", { className: "empty" }, "Belum ada data evaluasi prediksi.");
+  if (!points.length) return <div className="empty">Belum ada data evaluasi prediksi.</div>;
+
   const values = points.flatMap((row) => [row.actual, row.predicted_log_mlr]);
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const scale = (value) => pad + ((value - min) / ((max - min) || 1)) * (width - pad * 1.4);
-  const sy = (value) => height - pad - ((value - min) / ((max - min) || 1)) * (height - pad * 1.4);
+  const scale = (value) => pad + ((value - min) / (max - min || 1)) * (width - pad * 1.4);
+  const sy = (value) => height - pad - ((value - min) / (max - min || 1)) * (height - pad * 1.4);
 
-  return h("svg", { className: "scatter", viewBox: `0 0 ${width} ${height}`, role: "img" },
-    h("line", { x1: pad, y1: height - pad, x2: width - 16, y2: height - pad }),
-    h("line", { x1: pad, y1: 14, x2: pad, y2: height - pad }),
-    h("line", { className: "ideal-line", x1: scale(min), y1: sy(min), x2: scale(max), y2: sy(max) }),
-    h("text", { x: width / 2, y: height - 8, textAnchor: "middle" }, "Harga Aktual"),
-    h("text", { x: 15, y: height / 2, transform: `rotate(-90 15 ${height / 2})`, textAnchor: "middle" }, "Harga Prediksi"),
-    points.map((row, index) => h("circle", { key: index, cx: scale(row.actual), cy: sy(row.predicted_log_mlr), r: 3, fill: COLORS[0], opacity: 0.5 }))
+  return (
+    <svg className="scatter" viewBox={`0 0 ${width} ${height}`} role="img">
+      <line x1={pad} y1={height - pad} x2={width - 16} y2={height - pad} />
+      <line x1={pad} y1={14} x2={pad} y2={height - pad} />
+      <line className="ideal-line" x1={scale(min)} y1={sy(min)} x2={scale(max)} y2={sy(max)} />
+      <text x={width / 2} y={height - 8} textAnchor="middle">
+        Harga Aktual
+      </text>
+      <text x={15} y={height / 2} transform={`rotate(-90 15 ${height / 2})`} textAnchor="middle">
+        Harga Prediksi
+      </text>
+      {points.map((row, index) => (
+        <circle key={index} cx={scale(row.actual)} cy={sy(row.predicted_log_mlr)} r="3" fill={COLORS[0]} opacity="0.5" />
+      ))}
+    </svg>
   );
 }
 
 function BoxPlot({ rows, groupKey }) {
-  const groups = groupCount(rows, groupKey).slice(0, 8).map((group) => {
-    const values = rows.filter((row) => (row[groupKey] || "Tidak diketahui") === group.label).map((row) => row.harga).filter(Number.isFinite);
-    return { label: group.label, count: values.length, min: Math.min(...values), q1: quantile(values, 0.25), med: median(values), q3: quantile(values, 0.75), max: Math.max(...values) };
-  }).filter((group) => group.count);
+  const groups = groupCount(rows, groupKey)
+    .slice(0, 8)
+    .map((group) => {
+      const values = rows
+        .filter((row) => (row[groupKey] || "Tidak diketahui") === group.label)
+        .map((row) => row.harga)
+        .filter(Number.isFinite);
+      return {
+        label: group.label,
+        count: values.length,
+        min: Math.min(...values),
+        q1: quantile(values, 0.25),
+        med: median(values),
+        q3: quantile(values, 0.75),
+        max: Math.max(...values),
+      };
+    })
+    .filter((group) => group.count);
   const max = Math.max(1, ...groups.map((group) => group.max));
-  return h("div", { className: "boxplot" }, groups.map((group) =>
-    h("div", { className: "box-row", key: group.label },
-      h("span", { className: "box-label" }, group.label),
-      h("div", { className: "box-track" },
-        h("div", { className: "box-line", style: { left: `${(group.min / max) * 100}%`, width: `${((group.max - group.min) / max) * 100}%` } }),
-        h("div", { className: "box-rect", style: { left: `${(group.q1 / max) * 100}%`, width: `${((group.q3 - group.q1) / max) * 100}%` } }),
-        h("div", { className: "box-med", style: { left: `${(group.med / max) * 100}%` } })
-      ),
-      h("span", { className: "box-value" }, compactPrice(group.med))
-    )
-  ));
+
+  return (
+    <div className="boxplot">
+      {groups.map((group) => (
+        <div className="box-row" key={group.label}>
+          <span className="box-label">{group.label}</span>
+          <div className="box-track">
+            <div className="box-line" style={{ left: `${(group.min / max) * 100}%`, width: `${((group.max - group.min) / max) * 100}%` }} />
+            <div className="box-rect" style={{ left: `${(group.q1 / max) * 100}%`, width: `${((group.q3 - group.q1) / max) * 100}%` }} />
+            <div className="box-med" style={{ left: `${(group.med / max) * 100}%` }} />
+          </div>
+          <span className="box-value">{compactPrice(group.med)}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function Heatmap({ rows }) {
-  const columns = ["tahun", "km", "harga", "is_suv", "is_mpv", "is_sedan", "is_hatchback"].filter((column) => rows.some((row) => Number.isFinite(row[column])));
+  const columns = ["tahun", "km", "harga", "is_suv", "is_mpv", "is_sedan", "is_hatchback"].filter((column) =>
+    rows.some((row) => Number.isFinite(row[column]))
+  );
   const matrix = correlation(rows, columns);
-  return h("div", { className: "heatmap", style: { gridTemplateColumns: `110px repeat(${columns.length}, minmax(54px, 1fr))` } },
-    h("span", null, ""),
-    columns.map((column) => h("b", { key: `h-${column}` }, column)),
-    columns.flatMap((rowName, rowIndex) => [
-      h("b", { key: `r-${rowName}` }, rowName),
-      ...columns.map((column, columnIndex) => {
-        const value = matrix[rowIndex][columnIndex];
-        const color = value === null ? "#e8e8e8" : value >= 0 ? `rgba(255, 104, 44, ${Math.abs(value)})` : `rgba(32, 32, 32, ${Math.abs(value) * 0.68})`;
-        return h("span", { key: `${rowName}-${column}`, className: "heat-cell", style: { background: color } }, value === null ? "-" : value.toFixed(2));
-      }),
-    ])
+
+  return (
+    <div className="heatmap" style={{ gridTemplateColumns: `110px repeat(${columns.length}, minmax(54px, 1fr))` }}>
+      <span />
+      {columns.map((column) => (
+        <b key={`h-${column}`}>{column}</b>
+      ))}
+      {columns.flatMap((rowName, rowIndex) => [
+        <b key={`r-${rowName}`}>{rowName}</b>,
+        ...columns.map((column, columnIndex) => {
+          const value = matrix[rowIndex][columnIndex];
+          const color =
+            value === null
+              ? "#e8e8e8"
+              : value >= 0
+                ? `rgba(62, 98, 132, ${Math.abs(value)})`
+                : `rgba(52, 50, 46, ${Math.abs(value) * 0.68})`;
+          return (
+            <span key={`${rowName}-${column}`} className="heat-cell" style={{ background: color }}>
+              {value === null ? "-" : value.toFixed(2)}
+            </span>
+          );
+        }),
+      ])}
+    </div>
   );
 }
 
 function DataTable({ rows, columns, limit = 120, sortKey, sortDir, onSort }) {
-  return h("div", { className: "table-wrap" },
-    h("table", null,
-      h("thead", null, h("tr", null, columns.map((column) => h("th", { key: column },
-        onSort ? h("button", { className: "th-button", onClick: () => onSort(column) }, column, sortKey === column ? ` ${sortDir === "asc" ? "^" : "v"}` : "") : column
-      )))),
-      h("tbody", null, rows.slice(0, limit).map((row, index) =>
-        h("tr", { key: index }, columns.map((column) => {
-          const value = row[column];
-          const text = column === "harga" && Number.isFinite(value) ? rupiah.format(value) : column === "km" && Number.isFinite(value) ? number.format(value) : value ?? "-";
-          return h("td", { key: column }, text);
-        }))
-      ))
-    )
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead key={column}>
+              {onSort ? (
+                <button className="th-button" onClick={() => onSort(column)} type="button">
+                  {column}
+                  {sortKey === column ? ` ${sortDir === "asc" ? "^" : "v"}` : ""}
+                </button>
+              ) : (
+                column
+              )}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.slice(0, limit).map((row, index) => (
+          <TableRow key={index}>
+            {columns.map((column) => {
+              const value = row[column];
+              const text =
+                column === "harga" && Number.isFinite(value)
+                  ? rupiah.format(value)
+                  : column === "km" && Number.isFinite(value)
+                    ? number.format(value)
+                    : value ?? "-";
+              return <TableCell key={column}>{text}</TableCell>;
+            })}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function FilterSelect({ value, placeholder, options, onChange }) {
+  return (
+    <Select value={value || "all"} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{placeholder}</SelectItem>
+        {options.map((item) => (
+          <SelectItem key={item} value={item}>
+            {item}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
 function Controls({ filters, setFilters, options }) {
   const update = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
-  return h("section", { className: "controls" },
-    h("label", null, "Cari", h("input", { type: "search", value: filters.search, onChange: (event) => update("search", event.target.value), placeholder: "merk / tipe" })),
-    h("select", { value: filters.merk, onChange: (event) => update("merk", event.target.value) }, h("option", { value: "" }, "Semua merk"), options.merk.map((item) => h("option", { key: item, value: item }, item))),
-    h("select", { value: filters.lokasi, onChange: (event) => update("lokasi", event.target.value) }, h("option", { value: "" }, "Semua lokasi"), options.lokasi.map((item) => h("option", { key: item, value: item }, item))),
-    h("select", { value: filters.transmisi, onChange: (event) => update("transmisi", event.target.value) }, h("option", { value: "" }, "Semua transmisi"), options.transmisi.map((item) => h("option", { key: item, value: item }, item))),
-    h("select", { value: filters.jenis_mobil, onChange: (event) => update("jenis_mobil", event.target.value) }, h("option", { value: "" }, "Semua jenis"), options.jenis_mobil.map((item) => h("option", { key: item, value: item }, item))),
-    h("label", null, "Tahun min", h("input", { type: "number", value: filters.minYear, onChange: (event) => update("minYear", event.target.value), min: 1990, max: 2026 })),
-    h("label", null, "Tahun max", h("input", { type: "number", value: filters.maxYear, onChange: (event) => update("maxYear", event.target.value), min: 1990, max: 2026 })),
-    h("label", null, "Harga min", h("input", { type: "number", value: filters.minPrice, onChange: (event) => update("minPrice", event.target.value), placeholder: "Rp" })),
-    h("label", null, "Harga max", h("input", { type: "number", value: filters.maxPrice, onChange: (event) => update("maxPrice", event.target.value), placeholder: "Rp" })),
-    h("select", { value: `${filters.sortKey}:${filters.sortDir}`, onChange: (event) => {
-      const [sortKey, sortDir] = event.target.value.split(":");
-      setFilters((current) => ({ ...current, sortKey, sortDir }));
-    } },
-      h("option", { value: "harga:desc" }, "Harga tertinggi"),
-      h("option", { value: "harga:asc" }, "Harga terendah"),
-      h("option", { value: "tahun:desc" }, "Tahun terbaru"),
-      h("option", { value: "tahun:asc" }, "Tahun terlama"),
-      h("option", { value: "km:asc" }, "KM terendah"),
-      h("option", { value: "km:desc" }, "KM tertinggi")
-    ),
-    h("button", { onClick: () => setFilters(defaultFilters) }, "Reset")
+
+  return (
+    <section className="controls-tonal">
+      <div>
+        <p className="field-label">Cari</p>
+        <Input type="search" value={filters.search} onChange={(event) => update("search", event.target.value)} placeholder="merk / tipe" />
+      </div>
+      <FilterSelect value={filters.merk} onChange={(v) => update("merk", v)} placeholder="Semua merk" options={options.merk} />
+      <FilterSelect value={filters.lokasi} onChange={(v) => update("lokasi", v)} placeholder="Semua lokasi" options={options.lokasi} />
+      <FilterSelect value={filters.transmisi} onChange={(v) => update("transmisi", v)} placeholder="Semua transmisi" options={options.transmisi} />
+      <FilterSelect value={filters.jenis_mobil} onChange={(v) => update("jenis_mobil", v)} placeholder="Semua jenis" options={options.jenis_mobil} />
+
+      <div>
+        <p className="field-label">Tahun min</p>
+        <Input type="number" value={filters.minYear} onChange={(event) => update("minYear", event.target.value)} min={1990} max={2026} />
+      </div>
+      <div>
+        <p className="field-label">Tahun max</p>
+        <Input type="number" value={filters.maxYear} onChange={(event) => update("maxYear", event.target.value)} min={1990} max={2026} />
+      </div>
+      <div>
+        <p className="field-label">Harga min</p>
+        <Input type="number" value={filters.minPrice} onChange={(event) => update("minPrice", event.target.value)} placeholder="Rp" />
+      </div>
+      <div>
+        <p className="field-label">Harga max</p>
+        <Input type="number" value={filters.maxPrice} onChange={(event) => update("maxPrice", event.target.value)} placeholder="Rp" />
+      </div>
+
+      <Select
+        value={`${filters.sortKey}:${filters.sortDir}`}
+        onValueChange={(v) => {
+          const [sortKey, sortDir] = v.split(":");
+          setFilters((current) => ({ ...current, sortKey, sortDir }));
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="harga:desc">Harga tertinggi</SelectItem>
+          <SelectItem value="harga:asc">Harga terendah</SelectItem>
+          <SelectItem value="tahun:desc">Tahun terbaru</SelectItem>
+          <SelectItem value="tahun:asc">Tahun terlama</SelectItem>
+          <SelectItem value="km:asc">KM terendah</SelectItem>
+          <SelectItem value="km:desc">KM tertinggi</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Button variant="secondary" onClick={() => setFilters(defaultFilters)}>
+        Reset
+      </Button>
+    </section>
   );
 }
 
 function LandingPage({ cleanRows, rawRows, pricedRows }) {
-  return h("section", { className: "landing" },
-    h("div", { className: "hero-main" },
-      h("div", { className: "hero-copy" },
-        h("p", null, "React Data Story"),
-        h("h1", null, "Mobil123 Used Car Analytics"),
-        h("span", null, "Aplikasi ini memuat data mentah, hasil processing, eksplorasi visual, korelasi, dashboard interaktif, dan ringkasan insight dari listing mobil bekas."),
-        h("div", { className: "hero-actions" },
-          h("a", { href: "#/dashboard" }, "Buka Dashboard"),
-          h("a", { href: "#/processing" }, "Lihat Processing")
-        )
-      ),
-      h("div", { className: "hero-preview" },
-        h("div", { className: "preview-card preview-main" },
-          h("div", { className: "preview-head" }, h("span", null, "Average price"), h("strong", null, "246 jt")),
-          h("div", { className: "area-chart" },
-            h("i", { style: { height: "36%" } }),
-            h("i", { style: { height: "58%" } }),
-            h("i", { style: { height: "44%" } }),
-            h("i", { style: { height: "72%" } }),
-            h("i", { style: { height: "66%" } }),
-            h("i", { style: { height: "88%" } })
-          )
-        ),
-        h("div", { className: "preview-card preview-side" },
-          h("div", { className: "donut" }, h("span", null, "74%")),
-          h("p", null, "priced listings")
-        )
-      )
-    ),
-    h("div", { className: "stats-grid hero-stats" },
-      h(Stat, { label: "Raw rows", value: number.format(rawRows.length), hint: "data awal scraping" }),
-      h(Stat, { label: "Clean rows", value: number.format(cleanRows.length), hint: "setelah pembersihan" }),
-      h(Stat, { label: "Ada harga", value: number.format(pricedRows.length), hint: "siap analisis harga" }),
-      h(Stat, { label: "Jumlah merk", value: number.format(new Set(cleanRows.map((row) => row.merk).filter(Boolean)).size), hint: "kategori brand" })
-    )
+  return (
+    <section className="landing">
+      <div className="hero-shell">
+        <div className="hero-copy">
+          <Badge>
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Trust Badge: Safety Certified Data Flow
+          </Badge>
+          <p className="hero-kicker">Serene Guardian Analytics</p>
+          <h1>Mobil123 Used Car Intelligence</h1>
+          <span>
+            Dashboard ini menyatukan data mentah, data bersih, EDA, korelasi, dan evaluasi regresi linear untuk membantu keputusan yang lebih tenang,
+            jelas, dan terukur.
+          </span>
+          <div className="hero-actions">
+            <Button asChild>
+              <a href="#/dashboard">Buka Dashboard</a>
+            </Button>
+            <Button asChild variant="secondary">
+              <a href="#/processing">Lihat Processing</a>
+            </Button>
+          </div>
+        </div>
+        <div className="hero-preview">
+          <Card className="preview-main bg-[color:var(--color-surface)]/60 backdrop-blur-xl">
+            <CardContent className="space-y-8 p-7">
+              <div className="preview-head">
+                <span>Average price</span>
+                <strong>246 jt</strong>
+              </div>
+              <div className="area-chart">
+                {[36, 58, 44, 72, 66, 88].map((v, idx) => (
+                  <i key={idx} style={{ height: `${v}%` }} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="preview-side bg-[color:var(--color-surface)]/70 backdrop-blur-xl">
+            <CardContent className="grid place-items-center gap-3 p-6">
+              <div className="donut">
+                <span>74%</span>
+              </div>
+              <p>priced listings</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <StatCard label="Raw rows" value={number.format(rawRows.length)} hint="data awal scraping" />
+        <StatCard label="Clean rows" value={number.format(cleanRows.length)} hint="setelah pembersihan" />
+        <StatCard label="Ada harga" value={number.format(pricedRows.length)} hint="siap analisis harga" />
+        <StatCard
+          label="Jumlah merk"
+          value={number.format(new Set(cleanRows.map((row) => row.merk).filter(Boolean)).size)}
+          hint="kategori brand"
+        />
+      </div>
+    </section>
   );
 }
 
 function DashboardPage({ rows, filtered, priced, filters, setFilters, options }) {
+  const [tableSearch, setTableSearch] = useState("");
   const prices = priced.map((row) => row.harga);
   const avgPrice = prices.length ? prices.reduce((sum, value) => sum + value, 0) / prices.length : null;
-  const sortTable = (column) => setFilters((current) => ({
-    ...current,
-    sortKey: column,
-    sortDir: current.sortKey === column && current.sortDir === "desc" ? "asc" : "desc",
-  }));
-  return h(React.Fragment, null,
-    h(Controls, { filters, setFilters, options }),
-    h("section", { className: "stats-grid" },
-      h(Stat, { label: "Listing tampil", value: number.format(filtered.length), hint: `${number.format(rows.length)} total bersih` }),
-      h(Stat, { label: "Listing ada harga", value: number.format(priced.length), hint: `${Math.round((priced.length / Math.max(filtered.length, 1)) * 100)}% dari filter` }),
-      h(Stat, { label: "Harga median", value: compactPrice(median(prices)), hint: "listing berharga" }),
-      h(Stat, { label: "Harga rata-rata", value: compactPrice(avgPrice), hint: "sensitif outlier" })
-    ),
-    h("section", { className: "grid two" },
-      h(Card, { title: "Distribusi Harga" }, h(Histogram, { data: histogram(priced, "harga", 12), color: COLORS[1] })),
-      h(Card, { title: "Distribusi Kilometer" }, h(Histogram, { data: histogram(filtered, "km", 12, (v) => `${Math.round(v / 1000)}K`), color: COLORS[5] }))
-    ),
-    h("section", { className: "grid three" },
-      h(Card, { title: "Top Merk" }, h(BarChart, { data: groupCount(filtered, "merk").slice(0, 12), color: COLORS[0], onBarClick: (item) => setFilters((current) => ({ ...current, merk: item.label === "Tidak diketahui" ? "" : item.label })) })),
-      h(Card, { title: "Lokasi Terbanyak" }, h(BarChart, { data: groupCount(filtered, "lokasi").slice(0, 12), color: COLORS[2], onBarClick: (item) => setFilters((current) => ({ ...current, lokasi: item.label === "Tidak diketahui" ? "" : item.label })) })),
-      h(Card, { title: "Harga Rata-rata per Merk" }, h(BarChart, { data: averageBy(priced, "merk").slice(0, 12), color: COLORS[3], valueFormat: (value) => compactPrice(value) }))
-    ),
-    h("section", { className: "grid two" },
-      h(Card, { title: "Tahun vs Harga" }, h(ScatterPlot, { rows: priced, xKey: "tahun", yKey: "harga", xLabel: "Tahun", yLabel: "Harga", color: COLORS[4] })),
-      h(Card, { title: "KM vs Harga" }, h(ScatterPlot, { rows: priced, xKey: "km", yKey: "harga", xLabel: "Kilometer", yLabel: "Harga", color: COLORS[2] }))
-    ),
-    h(Card, { title: "Filtered Listings", className: "table-card" }, h(DataTable, { rows: filtered, columns: ["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"], limit: 160, sortKey: filters.sortKey, sortDir: filters.sortDir, onSort: sortTable }))
+  const tableRows = useMemo(() => {
+    const query = tableSearch.trim().toLowerCase();
+    if (!query) return filtered;
+    const searchableCols = ["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"];
+    return filtered.filter((row) => searchableCols.some((col) => String(row[col] ?? "").toLowerCase().includes(query)));
+  }, [filtered, tableSearch]);
+
+  const sortTable = (column) =>
+    setFilters((current) => ({
+      ...current,
+      sortKey: column,
+      sortDir: current.sortKey === column && current.sortDir === "desc" ? "asc" : "desc",
+    }));
+
+  return (
+    <>
+      <Controls filters={filters} setFilters={setFilters} options={options} />
+      <section className="stats-grid">
+        <StatCard label="Listing tampil" value={number.format(filtered.length)} hint={`${number.format(rows.length)} total bersih`} />
+        <StatCard
+          label="Listing ada harga"
+          value={number.format(priced.length)}
+          hint={`${Math.round((priced.length / Math.max(filtered.length, 1)) * 100)}% dari filter`}
+        />
+        <StatCard label="Harga median" value={compactPrice(median(prices))} hint="listing berharga" />
+        <StatCard label="Harga rata-rata" value={compactPrice(avgPrice)} hint="sensitif outlier" />
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Distribusi Harga">
+          <Histogram data={histogram(priced, "harga", 12)} color={COLORS[1]} />
+        </SectionCard>
+        <SectionCard title="Distribusi Kilometer">
+          <Histogram data={histogram(filtered, "km", 12, (v) => `${Math.round(v / 1000)}K`)} color={COLORS[5]} />
+        </SectionCard>
+      </section>
+
+      <section className="grid-three">
+        <SectionCard title="Top Merk">
+          <BarChart
+            data={groupCount(filtered, "merk").slice(0, 12)}
+            color={COLORS[0]}
+            onBarClick={(item) => setFilters((current) => ({ ...current, merk: item.label === "Tidak diketahui" ? "" : item.label }))}
+          />
+        </SectionCard>
+        <SectionCard title="Lokasi Terbanyak">
+          <BarChart
+            data={groupCount(filtered, "lokasi").slice(0, 12)}
+            color={COLORS[2]}
+            onBarClick={(item) => setFilters((current) => ({ ...current, lokasi: item.label === "Tidak diketahui" ? "" : item.label }))}
+          />
+        </SectionCard>
+        <SectionCard title="Harga Rata-rata per Merk">
+          <BarChart data={averageBy(priced, "merk").slice(0, 12)} color={COLORS[3]} valueFormat={(value) => compactPrice(value)} />
+        </SectionCard>
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Tahun vs Harga">
+          <ScatterPlot rows={priced} xKey="tahun" yKey="harga" xLabel="Tahun" yLabel="Harga" color={COLORS[4]} />
+        </SectionCard>
+        <SectionCard title="KM vs Harga">
+          <ScatterPlot rows={priced} xKey="km" yKey="harga" xLabel="Kilometer" yLabel="Harga" color={COLORS[2]} />
+        </SectionCard>
+      </section>
+
+      <SectionCard title="Filtered Listings" className="table-card">
+        <div className="table-search-row">
+          <Input
+            type="search"
+            value={tableSearch}
+            onChange={(event) => setTableSearch(event.target.value)}
+            placeholder="Cari cepat di tabel: merk, tipe, lokasi, harga..."
+          />
+          <p>
+            Menampilkan {number.format(Math.min(tableRows.length, 160))} dari {number.format(tableRows.length)} baris hasil pencarian.
+          </p>
+        </div>
+        <DataTable
+          rows={tableRows}
+          columns={["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"]}
+          limit={160}
+          sortKey={filters.sortKey}
+          sortDir={filters.sortDir}
+          onSort={sortTable}
+        />
+      </SectionCard>
+    </>
   );
 }
 
 function RawPage({ rawRows }) {
-  return h(React.Fragment, null,
-    h("section", { className: "stats-grid" },
-      h(Stat, { label: "Total baris raw", value: number.format(rawRows.length), hint: "termasuk baris kosong" }),
-      h(Stat, { label: "Kolom raw", value: "8", hint: "hasil scraping awal" }),
-      h(Stat, { label: "Harga terisi", value: number.format(rawRows.filter((row) => row.listing__price).length), hint: "kolom listing__price" }),
-      h(Stat, { label: "Model terisi", value: number.format(rawRows.filter((row) => row["listing__rating-model"]).length), hint: "kolom model mentah" })
-    ),
-    h(Card, { title: "Raw Data Preview", className: "table-card" }, h(DataTable, { rows: rawRows, columns: Object.keys(rawRows[0] || {}), limit: 180 }))
+  return (
+    <>
+      <section className="stats-grid">
+        <StatCard label="Total baris raw" value={number.format(rawRows.length)} hint="termasuk baris kosong" />
+        <StatCard label="Kolom raw" value="8" hint="hasil scraping awal" />
+        <StatCard label="Harga terisi" value={number.format(rawRows.filter((row) => row.listing__price).length)} hint="kolom listing__price" />
+        <StatCard
+          label="Model terisi"
+          value={number.format(rawRows.filter((row) => row["listing__rating-model"]).length)}
+          hint="kolom model mentah"
+        />
+      </section>
+      <SectionCard title="Raw Data Preview" className="table-card">
+        <DataTable rows={rawRows} columns={Object.keys(rawRows[0] || {})} limit={180} />
+      </SectionCard>
+    </>
   );
 }
 
 function CleanPage({ rows }) {
-  return h(React.Fragment, null,
-    h("section", { className: "stats-grid" },
-      h(Stat, { label: "Clean rows", value: number.format(rows.length), hint: "baris kosong dibuang" }),
-      h(Stat, { label: "Harga kosong", value: number.format(rows.filter((row) => !Number.isFinite(row.harga)).length), hint: "tetap dipertahankan" }),
-      h(Stat, { label: "Tahun median", value: number.format(median(rows.map((row) => row.tahun).filter(Number.isFinite))), hint: "seluruh clean data" }),
-      h(Stat, { label: "KM median", value: number.format(median(rows.map((row) => row.km).filter(Number.isFinite))), hint: "midpoint rentang KM" })
-    ),
-    h(Card, { title: "Clean Data", className: "table-card" }, h(DataTable, { rows, columns: ["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"], limit: 220 }))
+  return (
+    <>
+      <section className="stats-grid">
+        <StatCard label="Clean rows" value={number.format(rows.length)} hint="baris kosong dibuang" />
+        <StatCard label="Harga kosong" value={number.format(rows.filter((row) => !Number.isFinite(row.harga)).length)} hint="tetap dipertahankan" />
+        <StatCard
+          label="Tahun median"
+          value={number.format(median(rows.map((row) => row.tahun).filter(Number.isFinite)))}
+          hint="seluruh clean data"
+        />
+        <StatCard label="KM median" value={number.format(median(rows.map((row) => row.km).filter(Number.isFinite)))} hint="midpoint rentang KM" />
+      </section>
+      <SectionCard title="Clean Data" className="table-card">
+        <DataTable rows={rows} columns={["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"]} limit={220} />
+      </SectionCard>
+    </>
   );
 }
 
 function RegressionTable({ rows }) {
-  return h("div", { className: "table-wrap compact-table" },
-    h("table", null,
-      h("thead", null, h("tr", null, h("th", null, "Fitur"), h("th", null, "Koefisien"), h("th", null, "Efek"))),
-      h("tbody", null, rows.map((row) =>
-        h("tr", { key: row.fitur },
-          h("td", null, row.fitur),
-          h("td", null, Number(row.koefisien).toFixed(3)),
-          h("td", null, `${Number(row.efek_persen).toFixed(1)}%`)
-        )
-      ))
-    )
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Fitur</TableHead>
+          <TableHead>Koefisien</TableHead>
+          <TableHead>Efek</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.fitur}>
+            <TableCell>{row.fitur}</TableCell>
+            <TableCell>{Number(row.koefisien).toFixed(3)}</TableCell>
+            <TableCell>{Number(row.efek_persen).toFixed(1)}%</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
 function ModelComparison({ models }) {
-  return h("div", { className: "model-compare" }, models.map((item) =>
-    h("div", { className: "model-row", key: item.model },
-      h("div", null, h("strong", null, item.model), h("span", null, item.note)),
-      h("b", null, item.r2.toFixed(3)),
-      h("b", null, compactPrice(item.mae))
-    )
-  ));
+  return (
+    <div className="model-compare">
+      {models.map((item) => (
+        <div className="model-row" key={item.model}>
+          <div>
+            <strong>{item.model}</strong>
+            <span>{item.note}</span>
+          </div>
+          <b>{item.r2.toFixed(3)}</b>
+          <b>{compactPrice(item.mae)}</b>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function ProcessingPage({ regression }) {
@@ -391,77 +692,143 @@ function ProcessingPage({ regression }) {
     ["Ekstraksi", "Mengambil tahun dari ellipsize, memecah merk dan tipe dari listing__rating-model, lalu fallback ke ellipsize jika model kosong."],
     ["Normalisasi", "Mengubah teks kilometer seperti 40 - 45K KM menjadi angka midpoint dan harga Rupiah menjadi integer."],
     ["Feature", "Membuat kolom jenis_mobil serta dummy is_suv, is_mpv, is_sedan, dan jenis lain yang muncul."],
-    ["Multiple Linear Regression", "Model regresi linear berganda dibuat karena variabel X lebih dari satu: usia_mobil, km, merk, transmisi, penjual, jenis_mobil, dan dummy jenis mobil. Versi terbaik memakai target log(harga)."],
-    ["Export", "Menyimpan raw JSON, clean JSON, clean CSV, metadata, parquet, dan regression JSON untuk dipakai React."]
+    ["Multiple Linear Regression", "Model regresi linear berganda dibuat karena variabel X lebih dari satu: usia_mobil, km, merk, transmisi, penjual, jenis_mobil, dan dummy jenis mobil."],
+    ["Export", "Menyimpan raw JSON, clean JSON, clean CSV, metadata, parquet, dan regression JSON untuk dipakai React."],
   ];
-  return h(React.Fragment, null,
-    regression ? h("section", { className: "stats-grid" },
-      h(Stat, { label: "Model", value: "Log MLR", hint: regression.selected_model }),
-      h(Stat, { label: "R2 test", value: regression.r2_test.toFixed(3), hint: "di skala log harga" }),
-      h(Stat, { label: "MAE test", value: compactPrice(regression.mae_test), hint: "rata-rata error absolut" }),
-      h(Stat, { label: "Median APE", value: `${regression.median_ape_test.toFixed(1)}%`, hint: "median error persentase" })
-    ) : null,
-    h("section", { className: "grid two" },
-      h(Card, { title: "Alur Processing" },
-        h("div", { className: "process-list" }, steps.map(([title, body], index) =>
-          h("div", { className: "process-step", key: title }, h("strong", null, `${index + 1}. ${title}`), h("p", null, body))
-        ))
-      ),
-      h(Card, { title: "Formula Regresi" },
-        h("p", null, regression?.formula || "harga = b0 + b1*x1 + b2*x2 + ... + error"),
-        h("div", { className: "pill-list" }, (regression?.feature_columns || []).map((feature) => h("span", { key: feature }, feature)))
-      )
-    ),
-    regression ? h("section", { className: "grid two" },
-      h(Card, { title: "Perbandingan Model" }, h("div", { className: "compare-head" }, h("span", null, "Model"), h("span", null, "R2"), h("span", null, "MAE")), h(ModelComparison, { models: regression.model_comparison })),
-      h(Card, { title: "Actual vs Predicted" }, h(PredictionPlot, { rows: regression.evaluation_points }))
-    ) : null,
-    regression ? h("section", { className: "grid two" },
-      h(Card, { title: "Distribusi Residual" }, h(Histogram, { data: histogram(regression.evaluation_points, "residual_log_mlr", 12, (v) => compactPrice(v)), color: COLORS[0] })),
-      h(Card, { title: "Interpretasi Model" },
-        h("ul", { className: "notes" },
-          h("li", null, regression.interpretation_note),
-          h("li", null, "Titik yang jauh dari garis diagonal di plot actual-vs-predicted adalah listing dengan error prediksi besar."),
-          h("li", null, "Model ini masih baseline linear, jadi cocok untuk pembelajaran interpretasi dan evaluasi awal.")
-        )
-      )
-    ) : null,
-    regression ? h("section", { className: "grid three" },
-      h(Card, { title: "Koefisien Positif Terbesar" }, h(RegressionTable, { rows: regression.top_positive_coefficients })),
-      h(Card, { title: "Koefisien Negatif Terbesar" }, h(RegressionTable, { rows: regression.top_negative_coefficients })),
-      h(Card, { title: "Pengaruh Absolut Terbesar" }, h(RegressionTable, { rows: regression.top_impact_coefficients }))
-    ) : null
+
+  return (
+    <>
+      {regression ? (
+        <section className="stats-grid">
+          <StatCard label="Model" value="Log MLR" hint={regression.selected_model} />
+          <StatCard label="R2 test" value={regression.r2_test.toFixed(3)} hint="di skala log harga" />
+          <StatCard label="MAE test" value={compactPrice(regression.mae_test)} hint="rata-rata error absolut" />
+          <StatCard label="Median APE" value={`${regression.median_ape_test.toFixed(1)}%`} hint="median error persentase" />
+        </section>
+      ) : null}
+
+      <section className="grid-two">
+        <SectionCard title="Alur Processing">
+          <div className="process-list">
+            {steps.map(([title, body], index) => (
+              <div className="process-step" key={title}>
+                <strong>{index + 1}. {title}</strong>
+                <p>{body}</p>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Formula Regresi">
+          <p>{regression?.formula || "harga = b0 + b1*x1 + b2*x2 + ... + error"}</p>
+          <div className="pill-list">
+            {(regression?.feature_columns || []).map((feature) => (
+              <Badge key={feature} variant="neutral">{feature}</Badge>
+            ))}
+          </div>
+        </SectionCard>
+      </section>
+
+      {regression ? (
+        <section className="grid-two">
+          <SectionCard title="Perbandingan Model">
+            <div className="compare-head">
+              <span>Model</span>
+              <span>R2</span>
+              <span>MAE</span>
+            </div>
+            <ModelComparison models={regression.model_comparison} />
+          </SectionCard>
+          <SectionCard title="Actual vs Predicted">
+            <PredictionPlot rows={regression.evaluation_points} />
+          </SectionCard>
+        </section>
+      ) : null}
+
+      {regression ? (
+        <section className="grid-two">
+          <SectionCard title="Distribusi Residual">
+            <Histogram data={histogram(regression.evaluation_points, "residual_log_mlr", 12, (v) => compactPrice(v))} color={COLORS[0]} />
+          </SectionCard>
+          <SectionCard title="Interpretasi Model">
+            <ul className="notes">
+              <li>{regression.interpretation_note}</li>
+              <li>Titik yang jauh dari garis diagonal di plot actual-vs-predicted adalah listing dengan error prediksi besar.</li>
+              <li>Model ini masih baseline linear, jadi cocok untuk pembelajaran interpretasi dan evaluasi awal.</li>
+            </ul>
+          </SectionCard>
+        </section>
+      ) : null}
+
+      {regression ? (
+        <section className="grid-three">
+          <SectionCard title="Koefisien Positif Terbesar">
+            <RegressionTable rows={regression.top_positive_coefficients} />
+          </SectionCard>
+          <SectionCard title="Koefisien Negatif Terbesar">
+            <RegressionTable rows={regression.top_negative_coefficients} />
+          </SectionCard>
+          <SectionCard title="Pengaruh Absolut Terbesar">
+            <RegressionTable rows={regression.top_impact_coefficients} />
+          </SectionCard>
+        </section>
+      ) : null}
+    </>
   );
 }
 
 function EdaPage({ rows, priced }) {
   const missing = missingSummary(rows, ["tahun", "merk", "tipe", "jenis_mobil", "transmisi", "km", "lokasi", "penjual", "harga"]);
   const outliers = outlierSummary(priced, "harga");
-  return h(React.Fragment, null,
-    h("section", { className: "grid two" },
-      h(Card, { title: "Distribusi Harga" }, h(Histogram, { data: histogram(priced, "harga", 12), color: COLORS[1] })),
-      h(Card, { title: "Distribusi Tahun" }, h(Histogram, { data: histogram(rows, "tahun", 12, (v) => `${Math.round(v)}`), color: COLORS[0] }))
-    ),
-    h("section", { className: "grid three" },
-      h(Card, { title: "Jenis Mobil" }, h(BarChart, { data: groupCount(rows, "jenis_mobil").slice(0, 12), color: COLORS[5] })),
-      h(Card, { title: "Transmisi" }, h(BarChart, { data: groupCount(rows, "transmisi"), color: COLORS[4] })),
-      h(Card, { title: "Penjual" }, h(BarChart, { data: groupCount(rows, "penjual"), color: COLORS[2] }))
-    ),
-    h("section", { className: "grid three" },
-      h(Card, { title: "Missing Value" }, h(BarChart, { data: missing, color: COLORS[0] })),
-      h(Card, { title: "Top Tipe Mobil" }, h(BarChart, { data: groupCount(rows, "tipe").slice(0, 12), color: COLORS[2] })),
-      h(Card, { title: "Outlier Harga" },
-        h("div", { className: "summary-list" },
-          h("p", null, `Outlier terdeteksi: ${number.format(outliers.outliers.length)} listing.`),
-          h("p", null, `Batas bawah: ${compactPrice(outliers.low)}.`),
-          h("p", null, `Batas atas: ${compactPrice(outliers.high)}.`)
-        )
-      )
-    ),
-    h("section", { className: "grid two" },
-      h(Card, { title: "Sebaran Harga per Transmisi" }, h(BoxPlot, { rows: priced, groupKey: "transmisi" })),
-      h(Card, { title: "Sebaran Harga per Penjual" }, h(BoxPlot, { rows: priced, groupKey: "penjual" }))
-    )
+
+  return (
+    <>
+      <section className="grid-two">
+        <SectionCard title="Distribusi Harga">
+          <Histogram data={histogram(priced, "harga", 12)} color={COLORS[1]} />
+        </SectionCard>
+        <SectionCard title="Distribusi Tahun">
+          <Histogram data={histogram(rows, "tahun", 12, (v) => `${Math.round(v)}`)} color={COLORS[0]} />
+        </SectionCard>
+      </section>
+
+      <section className="grid-three">
+        <SectionCard title="Jenis Mobil">
+          <BarChart data={groupCount(rows, "jenis_mobil").slice(0, 12)} color={COLORS[5]} />
+        </SectionCard>
+        <SectionCard title="Transmisi">
+          <BarChart data={groupCount(rows, "transmisi")} color={COLORS[4]} />
+        </SectionCard>
+        <SectionCard title="Penjual">
+          <BarChart data={groupCount(rows, "penjual")} color={COLORS[2]} />
+        </SectionCard>
+      </section>
+
+      <section className="grid-three">
+        <SectionCard title="Missing Value">
+          <BarChart data={missing} color={COLORS[0]} />
+        </SectionCard>
+        <SectionCard title="Top Tipe Mobil">
+          <BarChart data={groupCount(rows, "tipe").slice(0, 12)} color={COLORS[2]} />
+        </SectionCard>
+        <SectionCard title="Outlier Harga">
+          <div className="summary-list">
+            <p>Outlier terdeteksi: {number.format(outliers.outliers.length)} listing.</p>
+            <p>Batas bawah: {compactPrice(outliers.low)}.</p>
+            <p>Batas atas: {compactPrice(outliers.high)}.</p>
+          </div>
+        </SectionCard>
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Sebaran Harga per Transmisi">
+          <BoxPlot rows={priced} groupKey="transmisi" />
+        </SectionCard>
+        <SectionCard title="Sebaran Harga per Penjual">
+          <BoxPlot rows={priced} groupKey="penjual" />
+        </SectionCard>
+      </section>
+    </>
   );
 }
 
@@ -469,29 +836,46 @@ function CorrelationPage({ priced }) {
   const insights = correlationInsights(priced);
   const strongestPositive = insights.filter((item) => item.value > 0).sort((a, b) => b.value - a.value)[0];
   const strongestNegative = insights.filter((item) => item.value < 0).sort((a, b) => a.value - b.value)[0];
-  return h(React.Fragment, null,
-    h("section", { className: "grid two" },
-      h(Card, { title: "Heatmap Korelasi" }, h(Heatmap, { rows: priced })),
-      h(Card, { title: "Insight Korelasi" },
-        h("ul", { className: "notes" },
-          strongestPositive ? h("li", null, `Korelasi positif terkuat terhadap harga: ${strongestPositive.label} (${strongestPositive.value.toFixed(2)}).`) : null,
-          strongestNegative ? h("li", null, `Korelasi negatif terkuat terhadap harga: ${strongestNegative.label} (${strongestNegative.value.toFixed(2)}).`) : null,
-          h("li", null, "Korelasi positif berarti dua variabel cenderung naik bersama."),
-          h("li", null, "Korelasi negatif berarti ketika satu variabel naik, variabel lain cenderung turun."),
-          h("li", null, "Korelasi tidak membuktikan sebab-akibat; ini dipakai sebagai petunjuk awal sebelum modeling.")
-        )
-      )
-    ),
-    h("section", { className: "grid two" },
-      h(Card, { title: "Ranking Korelasi ke Harga" }, h(BarChart, { data: insights.map((item) => ({ label: item.label, value: Math.abs(item.value), raw: item.value })).slice(0, 10), color: COLORS[0], valueFormat: (value, item) => item.raw.toFixed(2) })),
-      h(Card, { title: "Catatan Dummy Kategori" },
-        h("p", null, "Kolom seperti is_suv atau is_mpv adalah dummy 0/1. Korelasinya membaca kecenderungan kategori tersebut terhadap harga, bukan efek kausal langsung.")
-      )
-    ),
-    h("section", { className: "grid two" },
-      h(Card, { title: "Tahun vs Harga" }, h(ScatterPlot, { rows: priced, xKey: "tahun", yKey: "harga", xLabel: "Tahun", yLabel: "Harga", color: COLORS[4] })),
-      h(Card, { title: "KM vs Harga" }, h(ScatterPlot, { rows: priced, xKey: "km", yKey: "harga", xLabel: "Kilometer", yLabel: "Harga", color: COLORS[2] }))
-    )
+
+  return (
+    <>
+      <section className="grid-two">
+        <SectionCard title="Heatmap Korelasi">
+          <Heatmap rows={priced} />
+        </SectionCard>
+        <SectionCard title="Insight Korelasi">
+          <ul className="notes">
+            {strongestPositive ? <li>Korelasi positif terkuat terhadap harga: {strongestPositive.label} ({strongestPositive.value.toFixed(2)}).</li> : null}
+            {strongestNegative ? <li>Korelasi negatif terkuat terhadap harga: {strongestNegative.label} ({strongestNegative.value.toFixed(2)}).</li> : null}
+            <li>Korelasi positif berarti dua variabel cenderung naik bersama.</li>
+            <li>Korelasi negatif berarti ketika satu variabel naik, variabel lain cenderung turun.</li>
+            <li>Korelasi tidak membuktikan sebab-akibat; ini dipakai sebagai petunjuk awal sebelum modeling.</li>
+          </ul>
+        </SectionCard>
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Ranking Korelasi ke Harga">
+          <BarChart
+            data={insights.map((item) => ({ label: item.label, value: Math.abs(item.value), raw: item.value })).slice(0, 10)}
+            color={COLORS[0]}
+            valueFormat={(_, item) => item.raw.toFixed(2)}
+          />
+        </SectionCard>
+        <SectionCard title="Catatan Dummy Kategori">
+          <p>Kolom seperti is_suv atau is_mpv adalah dummy 0/1. Korelasinya membaca kecenderungan kategori tersebut terhadap harga, bukan efek kausal langsung.</p>
+        </SectionCard>
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Tahun vs Harga">
+          <ScatterPlot rows={priced} xKey="tahun" yKey="harga" xLabel="Tahun" yLabel="Harga" color={COLORS[4]} />
+        </SectionCard>
+        <SectionCard title="KM vs Harga">
+          <ScatterPlot rows={priced} xKey="km" yKey="harga" xLabel="Kilometer" yLabel="Harga" color={COLORS[2]} />
+        </SectionCard>
+      </section>
+    </>
   );
 }
 
@@ -499,29 +883,50 @@ function ConclusionPage({ rows, priced, regression }) {
   const topBrand = groupCount(rows, "merk")[0];
   const topLocation = groupCount(rows, "lokasi")[0];
   const medPrice = compactPrice(median(priced.map((row) => row.harga)));
-  return h("section", { className: "conclusion" },
-    h(Card, { title: "Kesimpulan Utama" },
-      h("ul", { className: "notes" },
-        h("li", null, `Dataset bersih berisi ${number.format(rows.length)} listing, dengan ${number.format(priced.length)} listing memiliki harga.`),
-        h("li", null, `Merk paling sering muncul adalah ${topBrand?.label || "-"} dan lokasi terbanyak adalah ${topLocation?.label || "-"}.`),
-        h("li", null, `Median harga listing yang tersedia berada di kisaran ${medPrice}.`),
-        h("li", null, "Tahun kendaraan, kilometer, merk, jenis mobil, transmisi, lokasi, dan tipe penjual layak dipakai sebagai variabel analisis harga."),
-        regression ? h("li", null, `Model terbaik saat ini adalah ${regression.selected_model}, dengan R2 test ${regression.r2_test.toFixed(3)} dan MAE ${compactPrice(regression.mae_test)}.`) : null
-      )
-    ),
-    h(Card, { title: "Arahan Lanjutan" },
-      h("p", null, "Untuk analisis prediktif, data yang harga kosong bisa dipisahkan dari training set. Transformasi log harga juga relevan karena harga mobil biasanya condong ke kanan dan memiliki outlier.")
-    )
+
+  return (
+    <section className="conclusion">
+      <SectionCard title="Kesimpulan Utama">
+        <ul className="notes">
+          <li>Dataset bersih berisi {number.format(rows.length)} listing, dengan {number.format(priced.length)} listing memiliki harga.</li>
+          <li>Merk paling sering muncul adalah {topBrand?.label || "-"} dan lokasi terbanyak adalah {topLocation?.label || "-"}.</li>
+          <li>Median harga listing yang tersedia berada di kisaran {medPrice}.</li>
+          <li>Tahun kendaraan, kilometer, merk, jenis mobil, transmisi, lokasi, dan tipe penjual layak dipakai sebagai variabel analisis harga.</li>
+          {regression ? <li>Model terbaik saat ini adalah {regression.selected_model}, dengan R2 test {regression.r2_test.toFixed(3)} dan MAE {compactPrice(regression.mae_test)}.</li> : null}
+        </ul>
+      </SectionCard>
+
+      <SectionCard title="Arahan Lanjutan">
+        <p>Untuk analisis prediktif, data yang harga kosong bisa dipisahkan dari training set. Transformasi log harga juga relevan karena harga mobil biasanya condong ke kanan dan memiliki outlier.</p>
+      </SectionCard>
+    </section>
   );
 }
 
 function Header({ page }) {
-  return h(React.Fragment, null,
-    h("header", { className: "topbar" },
-      h("div", null, h("p", null, "Mobil123 Used Car Analytics"), h("h1", null, routes.find(([key]) => key === page)?.[1] || "Dashboard")),
-      h("a", { href: "/data/mobil123_clean.json", target: "_blank" }, "Buka JSON")
-    ),
-    h("nav", { className: "tabs" }, routes.map(([key, label]) => h("a", { key, href: `#/${key}`, className: page === key ? "active" : "" }, label)))
+  return (
+    <>
+      <header className="topbar">
+        <div>
+          <p className="hero-kicker">Mobil123 Used Car Analytics</p>
+          <h1>{routes.find(([key]) => key === page)?.[1] || "Dashboard"}</h1>
+        </div>
+        <Button asChild size="sm">
+          <a href="/data/mobil123_clean.json" target="_blank" rel="noreferrer">
+            Buka JSON
+            <ArrowUpRight className="h-4 w-4" />
+          </a>
+        </Button>
+      </header>
+
+      <nav className="tabs-glass">
+        {routes.map(([key, label]) => (
+          <a key={key} href={`#/${key}`} className={page === key ? "active" : ""}>
+            {label}
+          </a>
+        ))}
+      </nav>
+    </>
   );
 }
 
@@ -555,53 +960,92 @@ function App() {
 
   const options = useMemo(() => {
     const unique = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
-    return { merk: unique("merk"), lokasi: unique("lokasi"), transmisi: unique("transmisi"), jenis_mobil: unique("jenis_mobil") };
+    return {
+      merk: unique("merk"),
+      lokasi: unique("lokasi"),
+      transmisi: unique("transmisi"),
+      jenis_mobil: unique("jenis_mobil"),
+    };
   }, [rows]);
 
-  const filtered = useMemo(() => rows.filter((row) => {
-    const search = filters.search.trim().toLowerCase();
-    if (search) {
-      const text = [row.merk, row.tipe, row.jenis_mobil, row.lokasi, row.penjual].filter(Boolean).join(" ").toLowerCase();
-      if (!text.includes(search)) return false;
-    }
-    if (filters.merk && row.merk !== filters.merk) return false;
-    if (filters.lokasi && row.lokasi !== filters.lokasi) return false;
-    if (filters.transmisi && row.transmisi !== filters.transmisi) return false;
-    if (filters.jenis_mobil && row.jenis_mobil !== filters.jenis_mobil) return false;
-    if (filters.minYear && Number(row.tahun) < Number(filters.minYear)) return false;
-    if (filters.maxYear && Number(row.tahun) > Number(filters.maxYear)) return false;
-    if (filters.minPrice && Number.isFinite(row.harga) && row.harga < Number(filters.minPrice)) return false;
-    if (filters.maxPrice && Number.isFinite(row.harga) && row.harga > Number(filters.maxPrice)) return false;
-    return true;
-  }).sort((a, b) => {
-    const av = a[filters.sortKey];
-    const bv = b[filters.sortKey];
-    const emptyA = av === null || av === undefined;
-    const emptyB = bv === null || bv === undefined;
-    if (emptyA && emptyB) return 0;
-    if (emptyA) return 1;
-    if (emptyB) return -1;
-    const result = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
-    return filters.sortDir === "asc" ? result : -result;
-  }), [rows, filters]);
+  const filtered = useMemo(
+    () =>
+      rows
+        .filter((row) => {
+          const search = filters.search.trim().toLowerCase();
+          if (search) {
+            const text = [row.merk, row.tipe, row.jenis_mobil, row.lokasi, row.penjual].filter(Boolean).join(" ").toLowerCase();
+            if (!text.includes(search)) return false;
+          }
+          if (filters.merk && row.merk !== filters.merk) return false;
+          if (filters.lokasi && row.lokasi !== filters.lokasi) return false;
+          if (filters.transmisi && row.transmisi !== filters.transmisi) return false;
+          if (filters.jenis_mobil && row.jenis_mobil !== filters.jenis_mobil) return false;
+          if (filters.minYear && Number(row.tahun) < Number(filters.minYear)) return false;
+          if (filters.maxYear && Number(row.tahun) > Number(filters.maxYear)) return false;
+          if (filters.minPrice && Number.isFinite(row.harga) && row.harga < Number(filters.minPrice)) return false;
+          if (filters.maxPrice && Number.isFinite(row.harga) && row.harga > Number(filters.maxPrice)) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          const av = a[filters.sortKey];
+          const bv = b[filters.sortKey];
+          const emptyA = av === null || av === undefined;
+          const emptyB = bv === null || bv === undefined;
+          if (emptyA && emptyB) return 0;
+          if (emptyA) return 1;
+          if (emptyB) return -1;
+          const result = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+          return filters.sortDir === "asc" ? result : -result;
+        }),
+    [rows, filters]
+  );
+
   const priced = filtered.filter((row) => Number.isFinite(row.harga));
   const allPriced = rows.filter((row) => Number.isFinite(row.harga));
 
-  if (error) return h("main", { className: "app" }, h("div", { className: "error" }, error));
-  if (!rows.length || !rawRows.length) return h("main", { className: "app" }, h("div", { className: "loading" }, "Memuat data..."));
+  if (error)
+    return (
+      <main className="app-shell">
+        <div className="error">{error}</div>
+      </main>
+    );
+
+  if (!rows.length || !rawRows.length)
+    return (
+      <main className="app-shell">
+        <div className="loading">Memuat data...</div>
+      </main>
+    );
 
   const pageNode = {
-    landing: h(LandingPage, { cleanRows: rows, rawRows, pricedRows: allPriced }),
-    dashboard: h(DashboardPage, { rows, filtered, priced, filters, setFilters, options }),
-    raw: h(RawPage, { rawRows }),
-    clean: h(CleanPage, { rows }),
-    processing: h(ProcessingPage, { regression }),
-    eda: h(EdaPage, { rows, priced: allPriced }),
-    correlation: h(CorrelationPage, { priced: allPriced }),
-    conclusion: h(ConclusionPage, { rows, priced: allPriced, regression }),
+    landing: <LandingPage cleanRows={rows} rawRows={rawRows} pricedRows={allPriced} />,
+    dashboard: <DashboardPage rows={rows} filtered={filtered} priced={priced} filters={filters} setFilters={setFilters} options={options} />,
+    raw: <RawPage rawRows={rawRows} />,
+    clean: <CleanPage rows={rows} />,
+    processing: <ProcessingPage regression={regression} />,
+    eda: <EdaPage rows={rows} priced={allPriced} />,
+    correlation: <CorrelationPage priced={allPriced} />,
+    conclusion: <ConclusionPage rows={rows} priced={allPriced} regression={regression} />,
   }[page];
 
-  return h("main", { className: "app" }, h(Header, { page }), pageNode);
+  return (
+    <main className="app-shell">
+      <div className="ambient-shape" />
+      <div className="ambient-shape second" />
+      <div className="app-frame">
+        <Header page={page} />
+        <Separator className="my-10 opacity-30" />
+        <div className="page-content">
+          <div className="mb-6 flex items-center gap-2 text-sm text-[color:var(--color-on-surface-muted)]">
+            <Activity className="h-4 w-4" />
+            Insight Workspace
+          </div>
+          {pageNode}
+        </div>
+      </div>
+    </main>
+  );
 }
 
 export default App;
