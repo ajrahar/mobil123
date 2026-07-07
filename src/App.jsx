@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, ShieldCheck } from "lucide-react";
+import { Activity, ArrowUpRight, Calculator, ShieldCheck } from "lucide-react";
 import { COLORS, defaultFilters, routes } from "./config.js";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,6 +157,66 @@ function correlationInsights(rows) {
 function currentHash() {
   const hash = window.location.hash.replace("#/", "");
   return routes.some(([key]) => key === hash) ? hash : "landing";
+}
+
+function slugBodyType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildPrediction(form, regression) {
+  const artifacts = regression?.prediction_artifacts;
+  if (!artifacts) return null;
+
+  const intercept = Number(regression?.intercept);
+  const coefficients = artifacts.coefficients || {};
+  const currentYear = Number(artifacts.current_year) || 2026;
+  const usiaMobil = Math.max(0, currentYear - Number(form.tahun || currentYear));
+  const km = Math.max(0, Number(form.km || 0));
+  const featureValues = {
+    num__usia_mobil: usiaMobil,
+    num__km: km,
+  };
+
+  const categoricalFields = ["merk", "transmisi", "penjual", "jenis_mobil"];
+  categoricalFields.forEach((field) => {
+    const selected = form[field];
+    if (!selected) return;
+    const levels = artifacts.category_levels?.[field] || [];
+    const baseline = levels[0];
+    if (selected !== baseline) {
+      featureValues[`cat__${field}_${selected}`] = 1;
+    }
+  });
+
+  const dummyKey = slugBodyType(form.jenis_mobil);
+  (artifacts.dummy_columns || []).forEach((column) => {
+    featureValues[`num__${column}`] = column === `is_${dummyKey}` ? 1 : 0;
+  });
+
+  let predictedLog = intercept;
+  const contributions = Object.entries(featureValues)
+    .map(([feature, value]) => {
+      const coefficient = Number(coefficients[feature] || 0);
+      const effect = coefficient * Number(value || 0);
+      predictedLog += effect;
+      return { feature, value, coefficient, effect };
+    })
+    .filter((item) => item.effect !== 0)
+    .sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect));
+
+  return {
+    predictedLog,
+    predictedPrice: Math.exp(predictedLog),
+    usiaMobil,
+    baselineCategories: Object.fromEntries(
+      Object.entries(artifacts.category_levels || {}).map(([field, levels]) => [field, levels[0] || "-"])
+    ),
+    contributions: contributions.slice(0, 6),
+  };
 }
 
 function SectionCard({ title, children, className = "" }) {
@@ -637,6 +697,139 @@ function DashboardPage({ rows, filtered, priced, filters, setFilters, options })
   );
 }
 
+function PredictPage({ rows, regression, options }) {
+  const defaultRow = useMemo(
+    () =>
+      rows.find(
+        (row) => row.tahun && Number.isFinite(row.km) && row.merk && row.transmisi && row.penjual && row.jenis_mobil
+      ) || rows[0],
+    [rows]
+  );
+
+  const [form, setForm] = useState({
+    tahun: defaultRow?.tahun || 2020,
+    km: defaultRow?.km || 50000,
+    merk: defaultRow?.merk || options.merk[0] || "",
+    transmisi: defaultRow?.transmisi || options.transmisi[0] || "",
+    penjual: defaultRow?.penjual || options.penjual[0] || "",
+    jenis_mobil: defaultRow?.jenis_mobil || options.jenis_mobil[0] || "",
+  });
+
+  useEffect(() => {
+    if (!defaultRow) return;
+    setForm((current) =>
+      current.merk || current.transmisi || current.penjual || current.jenis_mobil
+        ? current
+        : {
+            tahun: defaultRow?.tahun || 2020,
+            km: defaultRow?.km || 50000,
+            merk: defaultRow?.merk || options.merk[0] || "",
+            transmisi: defaultRow?.transmisi || options.transmisi[0] || "",
+            penjual: defaultRow?.penjual || options.penjual[0] || "",
+            jenis_mobil: defaultRow?.jenis_mobil || options.jenis_mobil[0] || "",
+          }
+    );
+  }, [defaultRow, options]);
+
+  const prediction = useMemo(() => buildPrediction(form, regression), [form, regression]);
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+
+  if (!regression?.prediction_artifacts) {
+    return <div className="empty">Artefak model prediksi belum tersedia. Jalankan preprocessing untuk mengaktifkan demo predict.</div>;
+  }
+
+  return (
+    <>
+      <section className="grid-two predict-hero-grid">
+        <SectionCard title="Input Predict Demo">
+          <div className="predict-form-grid">
+            <div>
+              <p className="field-label">Tahun</p>
+              <Input type="number" min={1990} max={2026} value={form.tahun} onChange={(event) => update("tahun", event.target.value)} />
+            </div>
+            <div>
+              <p className="field-label">Kilometer</p>
+              <Input type="number" min={0} value={form.km} onChange={(event) => update("km", event.target.value)} />
+            </div>
+            <div>
+              <p className="field-label">Merk</p>
+              <FilterSelect value={form.merk} onChange={(value) => update("merk", value)} placeholder="Pilih merk" options={options.merk} />
+            </div>
+            <div>
+              <p className="field-label">Transmisi</p>
+              <FilterSelect value={form.transmisi} onChange={(value) => update("transmisi", value)} placeholder="Pilih transmisi" options={options.transmisi} />
+            </div>
+            <div>
+              <p className="field-label">Penjual</p>
+              <FilterSelect value={form.penjual} onChange={(value) => update("penjual", value)} placeholder="Pilih penjual" options={options.penjual} />
+            </div>
+            <div>
+              <p className="field-label">Jenis Mobil</p>
+              <FilterSelect value={form.jenis_mobil} onChange={(value) => update("jenis_mobil", value)} placeholder="Pilih jenis mobil" options={options.jenis_mobil} />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Hasil Prediksi">
+          <div className="predict-summary">
+            <div className="predict-price-card">
+              <span>Estimasi harga</span>
+              <strong>{rupiah.format(prediction?.predictedPrice || 0)}</strong>
+              <p>Model menggunakan log-target multiple linear regression dengan MAE test {compactPrice(regression.mae_test)}.</p>
+            </div>
+            <div className="predict-meta-grid">
+              <div>
+                <p className="field-label">Usia mobil</p>
+                <strong>{number.format(prediction?.usiaMobil || 0)} tahun</strong>
+              </div>
+              <div>
+                <p className="field-label">Baseline merk</p>
+                <strong>{prediction?.baselineCategories.merk}</strong>
+              </div>
+              <div>
+                <p className="field-label">Baseline transmisi</p>
+                <strong>{prediction?.baselineCategories.transmisi}</strong>
+              </div>
+              <div>
+                <p className="field-label">Baseline jenis</p>
+                <strong>{prediction?.baselineCategories.jenis_mobil}</strong>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </section>
+
+      <section className="grid-two">
+        <SectionCard title="Faktor Terkuat pada Prediksi Ini">
+          <div className="predict-factor-list">
+            {(prediction?.contributions || []).length ? (
+              prediction.contributions.map((item) => (
+                <div className="predict-factor-row" key={item.feature}>
+                  <div>
+                    <strong>{item.feature}</strong>
+                    <p>nilai: {Number.isFinite(item.value) ? number.format(item.value) : item.value}</p>
+                  </div>
+                  <b>{item.effect >= 0 ? "+" : ""}{item.effect.toFixed(3)}</b>
+                </div>
+              ))
+            ) : (
+              <div className="empty">Belum ada kontribusi fitur yang aktif untuk kombinasi input ini.</div>
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Catatan Demo">
+          <ul className="notes">
+            <li>Halaman ini menghitung prediksi langsung di browser memakai koefisien model regresi yang sama dengan report processing.</li>
+            <li>Kategori baseline tidak memunculkan koefisien tambahan karena pada training digunakan one-hot encoding dengan drop kategori pertama.</li>
+            <li>Estimasi ini cocok sebagai demo interaktif, bukan appraisal final. Error rata-rata model masih berada di kisaran {compactPrice(regression.mae_test)}.</li>
+          </ul>
+        </SectionCard>
+      </section>
+    </>
+  );
+}
+
 function RawPage({ rawRows }) {
   return (
     <>
@@ -1001,12 +1194,20 @@ function Header({ page }) {
           <p className="hero-kicker">Mobil123 Used Car Analytics</p>
           <h1>{routes.find(([key]) => key === page)?.[1] || "Dashboard"}</h1>
         </div>
-        <Button asChild size="sm">
-          <a href={withBaseUrl("data/mobil123_clean.json")} target="_blank" rel="noreferrer">
-            Buka JSON
-            <ArrowUpRight className="h-4 w-4" />
-          </a>
-        </Button>
+        <div className="topbar-actions">
+          <Button asChild size="sm" variant={page === "predict" ? "default" : "secondary"}>
+            <a href="#/predict">
+              Predict Demo
+              <Calculator className="h-4 w-4" />
+            </a>
+          </Button>
+          <Button asChild size="sm">
+            <a href={withBaseUrl("data/mobil123_clean.json")} target="_blank" rel="noreferrer">
+              Buka JSON
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </Button>
+        </div>
       </header>
 
       <nav className="tabs-glass">
@@ -1056,6 +1257,7 @@ function App() {
     return {
       merk: unique("merk"),
       lokasi: unique("lokasi"),
+      penjual: unique("penjual"),
       transmisi: unique("transmisi"),
       jenis_mobil: unique("jenis_mobil"),
     };
@@ -1114,6 +1316,7 @@ function App() {
   const pageNode = {
     landing: <LandingPage cleanRows={rows} rawRows={rawRows} pricedRows={allPriced} />,
     dashboard: <DashboardPage rows={rows} filtered={filtered} priced={priced} filters={filters} setFilters={setFilters} options={options} />,
+    predict: <PredictPage rows={rows} regression={regression} options={options} />,
     raw: <RawPage rawRows={rawRows} />,
     clean: <CleanPage rows={rows} />,
     processing: <ProcessingPage regression={regression} metadata={metadata} />,

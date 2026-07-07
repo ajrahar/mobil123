@@ -3,6 +3,7 @@ export const COLORS = ["#ff682c", "#202020", "#816729", "#4d4d4d", "#828282", "#
 export const routes = [
   ["landing", "Landing"],
   ["dashboard", "Dashboard"],
+  ["predict", "Predict Demo"],
   ["raw", "Raw Data"],
   ["clean", "Clean Data"],
   ["processing", "Processing"],

@@ -78,6 +78,13 @@ body {
   align-items: end;
 }
 
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .hero-kicker {
   margin: 0 0 10px;
   color: var(--color-on-surface-muted);
@@ -533,6 +540,78 @@ body {
   margin-bottom: 14px;
 }
 
+.predict-hero-grid {
+  align-items: start;
+}
+
+.predict-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.predict-summary {
+  display: grid;
+  gap: 18px;
+}
+
+.predict-price-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, rgba(62, 98, 132, 0.14), rgba(198, 237, 196, 0.34));
+}
+
+.predict-price-card span,
+.predict-price-card p,
+.predict-factor-row p {
+  margin: 0;
+  color: var(--color-on-surface-muted);
+}
+
+.predict-price-card strong {
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  line-height: 1;
+}
+
+.predict-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.predict-meta-grid strong {
+  display: block;
+}
+
+.predict-factor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.predict-factor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 1rem;
+  background: var(--color-surface-low);
+}
+
+.predict-factor-row strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.heatmap,
+.scatter,
+.boxplot {
+  overflow-x: auto;
+}
+
 .table-search-row p {
   margin: 0;
   font-size: 12px;
@@ -548,11 +627,20 @@ body {
 }
 
 @media (max-width: 1080px) {
+  .app-frame {
+    width: min(1280px, calc(100vw - 20px));
+  }
+
   .hero-shell,
   .grid-three,
   .stats-grid,
   .controls-tonal {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-two,
+  .predict-meta-grid {
+    grid-template-columns: 1fr;
   }
 
   .hero-preview {
@@ -571,14 +659,39 @@ body {
   .grid-three,
   .stats-grid,
   .controls-tonal,
+  .predict-form-grid,
+  .predict-meta-grid,
   .compare-head,
   .model-row {
     grid-template-columns: 1fr;
   }
 
+  .topbar {
+    align-items: start;
+  }
+
+  .topbar h1 {
+    max-width: none;
+  }
+
+  .topbar-actions {
+    justify-content: stretch;
+  }
+
+  .topbar-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+
   .tabs-glass {
     border-radius: 1rem;
     width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .tabs-glass a {
+    white-space: nowrap;
   }
 
   .hero-preview {
@@ -599,5 +712,13 @@ body {
 
   .box-row {
     grid-template-columns: 90px 1fr 54px;
+  }
+
+  .heatmap {
+    min-width: 620px;
+  }
+
+  .scatter {
+    min-width: 620px;
   }
 }

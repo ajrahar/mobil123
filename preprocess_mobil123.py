@@ -344,6 +344,14 @@ def build_regression_report(clean_df):
     top_positive = coefficients.sort_values("koefisien", ascending=False).head(12)
     top_negative = coefficients.sort_values("koefisien", ascending=True).head(12)
     top_impact = coefficients.sort_values("abs_koefisien", ascending=False).head(18)
+    category_levels = {
+        column: sorted(model_df[column].dropna().astype(str).unique().tolist())
+        for column in categorical_cols
+    }
+    coefficient_map = {
+        row["fitur"]: float(row["koefisien"])
+        for _, row in coefficients.iterrows()
+    }
 
     evaluation = pd.DataFrame(
         {
@@ -429,6 +437,12 @@ def build_regression_report(clean_df):
         "evaluation_points": evaluation.sort_values("absolute_error_log_mlr", ascending=False)
         .head(220)[["actual", "predicted_log_mlr", "residual_log_mlr", "absolute_percentage_error_log_mlr"]]
         .to_dict(orient="records"),
+        "prediction_artifacts": {
+            "current_year": 2026,
+            "coefficients": coefficient_map,
+            "category_levels": category_levels,
+            "dummy_columns": dummy_cols,
+        },
         "formula": "log(harga) = intercept + b1*usia_mobil + b2*km + b3*merk + b4*transmisi + b5*penjual + b6*jenis_mobil + dummy_jenis",
         "interpretation_note": "Koefisien pada model log dapat dibaca sebagai perkiraan perubahan persentase harga, dengan asumsi fitur lain tetap.",
     }
