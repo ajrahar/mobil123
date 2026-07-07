@@ -398,28 +398,30 @@ function Heatmap({ rows }) {
   const matrix = correlation(rows, columns);
 
   return (
-    <div className="heatmap" style={{ gridTemplateColumns: `110px repeat(${columns.length}, minmax(54px, 1fr))` }}>
-      <span />
-      {columns.map((column) => (
-        <b key={`h-${column}`}>{column}</b>
-      ))}
-      {columns.flatMap((rowName, rowIndex) => [
-        <b key={`r-${rowName}`}>{rowName}</b>,
-        ...columns.map((column, columnIndex) => {
-          const value = matrix[rowIndex][columnIndex];
-          const color =
-            value === null
-              ? "#e8e8e8"
-              : value >= 0
-                ? `rgba(62, 98, 132, ${Math.abs(value)})`
-                : `rgba(52, 50, 46, ${Math.abs(value) * 0.68})`;
-          return (
-            <span key={`${rowName}-${column}`} className="heat-cell" style={{ background: color }}>
-              {value === null ? "-" : value.toFixed(2)}
-            </span>
-          );
-        }),
-      ])}
+    <div className="heatmap-scroll">
+      <div className="heatmap" style={{ gridTemplateColumns: `110px repeat(${columns.length}, minmax(54px, 1fr))` }}>
+        <span />
+        {columns.map((column) => (
+          <b key={`h-${column}`}>{column}</b>
+        ))}
+        {columns.flatMap((rowName, rowIndex) => [
+          <b key={`r-${rowName}`}>{rowName}</b>,
+          ...columns.map((column, columnIndex) => {
+            const value = matrix[rowIndex][columnIndex];
+            const color =
+              value === null
+                ? "#e8e8e8"
+                : value >= 0
+                  ? `rgba(62, 98, 132, ${Math.abs(value)})`
+                  : `rgba(52, 50, 46, ${Math.abs(value) * 0.68})`;
+            return (
+              <span key={`${rowName}-${column}`} className="heat-cell" style={{ background: color }}>
+                {value === null ? "-" : value.toFixed(2)}
+              </span>
+            );
+          }),
+        ])}
+      </div>
     </div>
   );
 }

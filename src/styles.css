@@ -69,6 +69,7 @@ body {
 .page-content {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 .topbar {
@@ -267,6 +268,14 @@ body {
 .conclusion {
   display: grid;
   gap: 18px;
+  min-width: 0;
+}
+
+.stats-grid > *,
+.grid-two > *,
+.grid-three > *,
+.conclusion > * {
+  min-width: 0;
 }
 
 .stats-grid {
@@ -345,6 +354,7 @@ body {
   gap: 10px;
   padding-left: 18px;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .ordered-notes {
@@ -509,11 +519,23 @@ body {
   display: grid;
   gap: 6px;
   align-items: center;
+  min-width: max-content;
+}
+
+.heatmap-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .heatmap b {
   font-size: 11px;
   color: var(--color-on-surface-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .heat-cell {
@@ -606,7 +628,7 @@ body {
   overflow-wrap: anywhere;
 }
 
-.heatmap,
+.heatmap-scroll,
 .scatter,
 .boxplot {
   overflow-x: auto;
@@ -715,7 +737,8 @@ body {
   }
 
   .heatmap {
-    min-width: 620px;
+    gap: 5px;
+    grid-template-columns: 86px repeat(7, 48px) !important;
   }
 
   .scatter {
